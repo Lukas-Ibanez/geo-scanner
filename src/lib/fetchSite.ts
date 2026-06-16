@@ -2,7 +2,10 @@
 // Solo Web Standard APIs (fetch, AbortController, TextDecoder).
 import type { FetchedSite } from './types';
 
-const USER_AGENT = 'GEO-Scanner/1.0 (+https://geo.lukasibanez.dev)';
+// UA de navegador real: muchos sitios bloquean User-Agents que parecen "robot",
+// sobre todo a peticiones desde servidores (las IPs de Cloudflare).
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 const PAGE_TIMEOUT_MS = 8000;
 const AUX_TIMEOUT_MS = 5000;
 const MAX_HTML_BYTES = 800_000; // ~800 KB (acota el CPU del parseo en el plan gratis)
@@ -48,7 +51,8 @@ async function fetchText(url: string, timeoutMs: number, maxBytes: number): Prom
     const res = await fetch(url, {
       headers: {
         'User-Agent': USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml,text/plain,application/xml,*/*',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
       },
       redirect: 'follow',
       signal: controller.signal,
