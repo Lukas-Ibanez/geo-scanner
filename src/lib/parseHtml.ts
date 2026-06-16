@@ -13,8 +13,7 @@ interface RWText {
   lastInTextNode: boolean;
 }
 
-const MAX_WORDS = 3000;
-const MAX_CHARS = 24000;
+const MAX_CHARS = 18000; // ~3.000 palabras; acota memoria y, sobre todo, el CPU del parseo
 // Elementos cuyo texto NO es contenido visible útil (se excluyen de mainText).
 const SKIP_TAGS = ['head', 'script', 'style', 'noscript', 'template', 'svg', 'iframe'];
 
@@ -37,15 +36,15 @@ export async function parseHtml(html: string): Promise<SiteSignals> {
 
   // Acumulación de texto visible con tope de palabras.
   let skipDepth = 0;
-  let words = 0;
+  let charCount = 0;
   const parts: string[] = [];
+  // Handler O(1): solo acumula texto crudo; la limpieza de espacios se hace UNA
+  // vez al final. Hacer regex por cada nodo de texto es lo que disparaba el CPU
+  // en páginas grandes (límite de 10ms en el plan gratis de Workers).
   const addText = (raw: string) => {
-    if (words >= MAX_WORDS) return;
-    const cleaned = raw.replace(/\s+/g, ' ');
-    if (!cleaned.trim()) return;
-    parts.push(cleaned);
-    const matched = cleaned.match(/\S+/g);
-    if (matched) words += matched.length;
+    if (charCount >= MAX_CHARS) return;
+    parts.push(raw);
+    charCount += raw.length;
   };
 
   // Factory de handler para encabezados (h1/h2/h3) con buffer por elemento.
@@ -157,8 +156,9 @@ export async function parseHtml(html: string): Promise<SiteSignals> {
   await rw.transform(new Response(html)).arrayBuffer();
 
   signals.jsonLdTypes = [...new Set(signals.jsonLdTypes)];
-  signals.mainText = parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
-  signals.wordCount = words;
+  const text = parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
+  signals.mainText = text;
+  signals.wordCount = text ? (text.match(/\S+/g)?.length ?? 0) : 0;
   return signals;
 }
 

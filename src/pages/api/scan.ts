@@ -26,6 +26,7 @@ function intEnv(value: string | undefined, fallback: number): number {
 }
 
 export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
+  try {
   const env = locals.runtime.env;
 
   // 1) Leer y validar el cuerpo
@@ -106,6 +107,16 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
 
   // 8) Devolver la proyección según el acceso (teaser vs full)
   return json(projectForClient(full, entitled), 200);
+  } catch (err) {
+    // Red de seguridad: cualquier error inesperado devuelve JSON limpio (no una
+    // página de error 500), para que el cliente muestre un mensaje y se pueda ver
+    // en `wrangler pages deployment tail`.
+    console.error('scan failed:', err);
+    return json(
+      { error: 'Tuvimos un problema procesando tu sitio. Inténtalo de nuevo en un momento.' },
+      500
+    );
+  }
 };
 
 export const GET: APIRoute = () => json({ error: 'Usa POST para escanear un sitio.' }, 405);

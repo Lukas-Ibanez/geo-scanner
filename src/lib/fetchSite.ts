@@ -5,7 +5,7 @@ import type { FetchedSite } from './types';
 const USER_AGENT = 'GEO-Scanner/1.0 (+https://geo.lukasibanez.dev)';
 const PAGE_TIMEOUT_MS = 8000;
 const AUX_TIMEOUT_MS = 5000;
-const MAX_HTML_BYTES = 2_000_000; // 2 MB
+const MAX_HTML_BYTES = 800_000; // ~800 KB (acota el CPU del parseo en el plan gratis)
 const MAX_AUX_BYTES = 200_000;
 
 interface FetchTextResult {
