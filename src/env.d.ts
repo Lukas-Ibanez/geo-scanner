@@ -13,6 +13,7 @@ interface Env {
 
   // Opcionales (con defaults en el código)
   GEMINI_MODEL?: string;
+  GEMINI_DAILY_LIMIT?: string;
   RATE_LIMIT_PER_HOUR?: string;
   CACHE_TTL_HOURS?: string;
   PORTFOLIO_CTA_URL?: string;

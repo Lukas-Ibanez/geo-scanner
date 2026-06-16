@@ -8,8 +8,8 @@ pages_build_output_dir = "./dist"
 # y pegar el `id` (y opcional preview_id) aquí.
 [[kv_namespaces]]
 binding = "SCAN_CACHE"
-id = "REEMPLAZAR_CON_KV_ID"
-preview_id = "REEMPLAZAR_CON_KV_PREVIEW_ID"
+id = "bcc955c5e1f343258b0e424b2e5db2dd"
+preview_id = "8553708f3602489fadf053c799046027"
 
 # --- D1: base de datos de leads ---
 # Crear con: wrangler d1 create geo_leads
@@ -17,7 +17,7 @@ preview_id = "REEMPLAZAR_CON_KV_PREVIEW_ID"
 [[d1_databases]]
 binding = "DB"
 database_name = "geo_leads"
-database_id = "REEMPLAZAR_CON_D1_ID"
+database_id = "1303ab9e-4ab7-47dc-a5df-05a609d3e9db"
 
 # GEMINI_API_KEY se inyecta como secret (no va aquí):
 #   Local:  .dev.vars

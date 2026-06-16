@@ -5,6 +5,8 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # --- Opcionales (tienen defaults razonables en el código) ---
 # Modelo de Gemini a usar (capa gratuita de Google AI Studio)
 # GEMINI_MODEL=gemini-2.5-flash
+# Tope global de llamadas a Gemini por día (protege tu cuota gratuita; 0 = sin tope)
+# GEMINI_DAILY_LIMIT=200
 # Máximo de escaneos por IP por hora
 # RATE_LIMIT_PER_HOUR=5
 # Horas de validez de la caché por dominio

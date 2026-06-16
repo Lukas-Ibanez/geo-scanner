@@ -56,6 +56,22 @@ function degraded(): ContentResult {
   };
 }
 
+// Cuenta las llamadas a Gemini por día (UTC) en KV y devuelve false si se
+// alcanzó el tope. `limit <= 0` significa sin tope. Si KV falla, no bloquea.
+async function withinDailyBudget(kv: KVNamespace, limit: number): Promise<boolean> {
+  if (limit <= 0) return true;
+  const key = `gemini:count:${new Date().toISOString().slice(0, 10)}`;
+  try {
+    const raw = await kv.get(key);
+    const count = raw ? parseInt(raw, 10) || 0 : 0;
+    if (count >= limit) return false;
+    await kv.put(key, String(count + 1), { expirationTtl: 172800 });
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 function buildUserPrompt(signals: SiteSignals): string {
   return [
     `Idioma declarado del sitio: ${signals.lang || 'desconocido'}`,
@@ -80,6 +96,12 @@ function clampInt(value: unknown): number {
 export async function evaluateContent(signals: SiteSignals, env: Env): Promise<ContentResult> {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) return degraded();
+
+  // Tope diario global de llamadas a Gemini (protege la cuota gratuita).
+  const parsedLimit = parseInt(env.GEMINI_DAILY_LIMIT ?? '', 10);
+  const dailyLimit = Number.isFinite(parsedLimit) ? parsedLimit : 200;
+  if (!(await withinDailyBudget(env.SCAN_CACHE, dailyLimit))) return degraded();
+
   const model = env.GEMINI_MODEL || DEFAULT_MODEL;
 
   const body = {
