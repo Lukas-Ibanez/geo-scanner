@@ -1,0 +1,24 @@
+name = "geo-scanner"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "./dist"
+
+# --- KV: caché de resultados de escaneo por dominio ---
+# Crear con: wrangler kv namespace create SCAN_CACHE
+# y pegar el `id` (y opcional preview_id) aquí.
+[[kv_namespaces]]
+binding = "SCAN_CACHE"
+id = "REEMPLAZAR_CON_KV_ID"
+preview_id = "REEMPLAZAR_CON_KV_PREVIEW_ID"
+
+# --- D1: base de datos de leads ---
+# Crear con: wrangler d1 create geo_leads
+# y pegar el `database_id` aquí.
+[[d1_databases]]
+binding = "DB"
+database_name = "geo_leads"
+database_id = "REEMPLAZAR_CON_D1_ID"
+
+# GEMINI_API_KEY se inyecta como secret (no va aquí):
+#   Local:  .dev.vars
+#   Prod:   wrangler pages secret put GEMINI_API_KEY

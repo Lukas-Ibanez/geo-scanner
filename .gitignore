@@ -1,0 +1,23 @@
+# build output
+dist/
+.astro/
+
+# wrangler / cloudflare local state
+.wrangler/
+
+# secrets
+.dev.vars
+.env
+.env.*
+
+# deps
+node_modules/
+
+# logs / os
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# claude code (config local de la máquina)
+.claude/settings.local.json

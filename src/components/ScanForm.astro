@@ -1,0 +1,43 @@
+---
+interface Props {
+  /** one-step: pide el correo junto a la URL. two-step: el correo es opcional (se pide luego para revelar el detalle). */
+  revealFlow?: 'one-step' | 'two-step';
+}
+const { revealFlow = 'one-step' } = Astro.props;
+const emailRequired = revealFlow === 'one-step';
+---
+
+<form id="scan-form" class="scan-form" data-reveal-flow={revealFlow} novalidate>
+  <div class="field">
+    <label for="url">La dirección de tu sitio web</label>
+    <input
+      id="url"
+      name="url"
+      type="text"
+      inputmode="url"
+      autocomplete="url"
+      spellcheck="false"
+      placeholder="tunegocio.com"
+      required
+    />
+  </div>
+
+  <div class="field">
+    <label for="email">Tu correo{emailRequired ? '' : ' (opcional)'}</label>
+    <input
+      id="email"
+      name="email"
+      type="email"
+      autocomplete="email"
+      placeholder="tucorreo@ejemplo.com"
+      required={emailRequired}
+    />
+  </div>
+
+  <button type="submit" class="btn btn-primary btn-block" id="scan-btn">
+    Escanear mi sitio gratis
+  </button>
+
+  <p class="form-hint">Gratis · sin registro · resultados en segundos</p>
+  <p class="form-error" id="form-error" role="alert" hidden></p>
+</form>

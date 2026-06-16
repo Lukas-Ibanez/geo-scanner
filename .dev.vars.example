@@ -1,0 +1,13 @@
+# Copia este archivo a `.dev.vars` (NO lo subas a git) y completa tu clave.
+# Obtén una clave gratis en https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=tu_clave_de_google_ai_studio
+
+# --- Opcionales (tienen defaults razonables en el código) ---
+# Modelo de Gemini a usar (capa gratuita de Google AI Studio)
+# GEMINI_MODEL=gemini-2.5-flash
+# Máximo de escaneos por IP por hora
+# RATE_LIMIT_PER_HOUR=5
+# Horas de validez de la caché por dominio
+# CACHE_TTL_HOURS=6
+# Link de la sección de servicios del portafolio (CTA final)
+# PORTFOLIO_CTA_URL=https://lukasibanez.dev/#servicios

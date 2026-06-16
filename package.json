@@ -1,0 +1,26 @@
+{
+  "name": "geo-scanner",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Auditoría de visibilidad en motores de búsqueda generativos (GEO).",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "wrangler pages dev ./dist",
+    "deploy": "astro build && wrangler pages deploy ./dist",
+    "check": "astro check",
+    "astro": "astro",
+    "db:local": "wrangler d1 execute geo_leads --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute geo_leads --remote --file=./schema.sql"
+  },
+  "dependencies": {
+    "astro": "^5.6.0",
+    "@astrojs/cloudflare": "^12.5.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20230914.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}

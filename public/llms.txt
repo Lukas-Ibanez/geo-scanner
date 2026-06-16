@@ -1,0 +1,15 @@
+# GEO Scanner
+
+> Herramienta web gratuita que audita qué tan preparado está un sitio para aparecer y ser citado por motores de búsqueda generativos (ChatGPT, Perplexity, Gemini, Google AI Overviews).
+
+GEO Scanner analiza una URL y entrega un puntaje de 0 a 100 más recomendaciones en lenguaje de dueño de negocio sobre cómo mejorar su visibilidad ante las IA. Está pensado para negocios no técnicos.
+
+## Qué evalúa
+- Si los robots de IA tienen permiso para leer el sitio.
+- Si queda claro qué ofrece el negocio y en qué zona/ciudad opera.
+- Si el contenido es claro, citable y muestra señales de autoridad.
+- Buenas prácticas técnicas que ayudan a la IA a entender el sitio.
+
+## Enlaces
+- Sitio: https://geo.lukasibanez.dev
+- Servicios y contacto: https://lukasibanez.dev
