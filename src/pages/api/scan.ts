@@ -41,12 +41,18 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
   if (!valid.ok) return json({ error: valid.error }, 400);
   const { url, origin, domain, email } = valid.data;
 
-  // 2) Rate limit por IP
+  // 2) Rate limit por IP (con whitelist que lo omite, p.ej. tu propia IP)
   const ip = request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
-  const limit = intEnv(env.RATE_LIMIT_PER_HOUR, 5);
-  const rl = await checkRateLimit(env.SCAN_CACHE, ip, limit);
-  if (!rl.allowed) {
-    return json({ error: 'Has hecho demasiados escaneos. Espera un momento e inténtalo de nuevo.' }, 429);
+  const whitelist = (env.RATE_LIMIT_WHITELIST || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!whitelist.includes(ip)) {
+    const limit = intEnv(env.RATE_LIMIT_PER_HOUR, 5);
+    const rl = await checkRateLimit(env.SCAN_CACHE, ip, limit);
+    if (!rl.allowed) {
+      return json({ error: 'Has hecho demasiados escaneos. Espera un momento e inténtalo de nuevo.' }, 429);
+    }
   }
 
   const ttlHours = intEnv(env.CACHE_TTL_HOURS, 6);

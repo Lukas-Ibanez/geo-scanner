@@ -15,6 +15,7 @@ interface Env {
   GEMINI_MODEL?: string;
   GEMINI_DAILY_LIMIT?: string;
   RATE_LIMIT_PER_HOUR?: string;
+  RATE_LIMIT_WHITELIST?: string;
   CACHE_TTL_HOURS?: string;
   PORTFOLIO_CTA_URL?: string;
 }

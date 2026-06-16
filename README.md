@@ -121,6 +121,7 @@ curl -X POST http://127.0.0.1:8788/api/scan \
 | `GEMINI_MODEL` | var | `gemini-2.5-flash` | Modelo de Gemini a usar. |
 | `GEMINI_DAILY_LIMIT` | var | `200` | Tope global de llamadas a Gemini por día (0 = sin tope). Protege tu cuota gratuita. |
 | `RATE_LIMIT_PER_HOUR` | var | `5` | Escaneos por IP por hora. |
+| `RATE_LIMIT_WHITELIST` | var | — | IPs sin límite, separadas por coma (p.ej. la tuya para probar). |
 | `CACHE_TTL_HOURS` | var | `6` | Horas de validez de la caché por dominio. |
 | `SCAN_CACHE` | KV binding | — | Caché de resultados + contadores de rate limit. |
 | `DB` | D1 binding | — | Base de datos de leads. |

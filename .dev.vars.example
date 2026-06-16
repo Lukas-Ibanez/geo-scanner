@@ -9,6 +9,8 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # GEMINI_DAILY_LIMIT=200
 # Máximo de escaneos por IP por hora
 # RATE_LIMIT_PER_HOUR=5
+# IPs sin límite de escaneos, separadas por coma (p.ej. la tuya, para probar)
+# RATE_LIMIT_WHITELIST=200.0.0.0,201.0.0.0
 # Horas de validez de la caché por dominio
 # CACHE_TTL_HOURS=6
 # Link de la sección de servicios del portafolio (CTA final)
