@@ -65,7 +65,16 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     // 4) Descargar el sitio + archivos auxiliares
     const site = await fetchSite(origin, url);
     if (!site.ok || !site.html) {
-      return json({ error: 'No pudimos acceder a tu sitio. Revisa la dirección e inténtalo de nuevo.' }, 502);
+      // Log para diagnóstico (visible con `wrangler pages deployment tail`):
+      // status 403/406/503/1020 = el sitio bloquea lectores automáticos; 0 = timeout/red.
+      console.error('fetchSite failed', { url, status: site.status, htmlLen: site.html.length });
+      return json(
+        {
+          error:
+            'No pudimos leer este sitio. Puede estar bloqueando lectores automáticos o no estar disponible en este momento. Prueba con otra página.',
+        },
+        502
+      );
     }
 
     // 5) Parsear, puntuar (técnico + IA) y combinar
