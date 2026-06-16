@@ -95,7 +95,10 @@ function clampInt(value: unknown): number {
 
 export async function evaluateContent(signals: SiteSignals, env: Env): Promise<ContentResult> {
   const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) return degraded();
+  if (!apiKey) {
+    console.error('Gemini: falta GEMINI_API_KEY (el secret no está configurado)');
+    return degraded();
+  }
 
   // Tope diario global de llamadas a Gemini (protege la cuota gratuita).
   const parsedLimit = parseInt(env.GEMINI_DAILY_LIMIT ?? '', 10);
@@ -111,7 +114,10 @@ export async function evaluateContent(signals: SiteSignals, env: Env): Promise<C
       responseMimeType: 'application/json',
       responseSchema: RESPONSE_SCHEMA,
       temperature: 0.4,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
+      // gemini-2.5-flash "piensa" por defecto y puede gastarse el presupuesto de
+      // tokens pensando sin devolver texto. Lo desactivamos para garantizar salida.
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
@@ -127,11 +133,18 @@ export async function evaluateContent(signals: SiteSignals, env: Env): Promise<C
         signal: controller.signal,
       }
     );
-    if (!res.ok) return degraded();
+    if (!res.ok) {
+      console.error('Gemini HTTP error', res.status, '(400=key inválida, 403=permiso, 429=cuota)');
+      return degraded();
+    }
 
     const data = (await res.json()) as any;
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return degraded();
+    const candidate = data?.candidates?.[0];
+    const text: string | undefined = candidate?.content?.parts?.[0]?.text;
+    if (!text) {
+      console.error('Gemini sin texto', { finishReason: candidate?.finishReason });
+      return degraded();
+    }
 
     const parsed = JSON.parse(text);
     let recs: string[] = Array.isArray(parsed.recomendaciones)
@@ -150,7 +163,8 @@ export async function evaluateContent(signals: SiteSignals, env: Env): Promise<C
       claridadGeografica: clampInt(parsed.claridadGeografica),
       recomendaciones: recs,
     };
-  } catch {
+  } catch (err) {
+    console.error('Gemini excepción:', err instanceof Error ? `${err.name}: ${err.message}` : err);
     return degraded();
   } finally {
     clearTimeout(timer);
