@@ -45,7 +45,7 @@ const FALLBACK_RECS = [
   'Suma señales de confianza visibles —años de experiencia, número de clientes, reseñas, datos concretos— para que la IA te perciba como una fuente fiable.',
 ];
 
-function degraded(): ContentResult {
+function degraded(reason: string): ContentResult {
   return {
     available: false,
     claridadNegocio: 0,
@@ -53,6 +53,7 @@ function degraded(): ContentResult {
     autoridad: 0,
     claridadGeografica: 0,
     recomendaciones: FALLBACK_RECS.slice(0, 4),
+    debug: reason,
   };
 }
 
@@ -96,14 +97,13 @@ function clampInt(value: unknown): number {
 export async function evaluateContent(signals: SiteSignals, env: Env): Promise<ContentResult> {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.error('Gemini: falta GEMINI_API_KEY (el secret no está configurado)');
-    return degraded();
+    return degraded('no-api-key');
   }
 
   // Tope diario global de llamadas a Gemini (protege la cuota gratuita).
   const parsedLimit = parseInt(env.GEMINI_DAILY_LIMIT ?? '', 10);
   const dailyLimit = Number.isFinite(parsedLimit) ? parsedLimit : 200;
-  if (!(await withinDailyBudget(env.SCAN_CACHE, dailyLimit))) return degraded();
+  if (!(await withinDailyBudget(env.SCAN_CACHE, dailyLimit))) return degraded('daily-limit');
 
   const model = env.GEMINI_MODEL || DEFAULT_MODEL;
 
@@ -121,52 +121,65 @@ export async function evaluateContent(signals: SiteSignals, env: Env): Promise<C
     },
   };
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  // Estados transitorios de Gemini (sobrecarga/cuota momentánea/timeouts) → reintentar.
+  const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  let lastReason = 'unknown';
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
         signal: controller.signal,
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const candidate = data?.candidates?.[0];
+        const text: string | undefined = candidate?.content?.parts?.[0]?.text;
+        if (!text) {
+          lastReason = 'no-text:' + (candidate?.finishReason ?? '?');
+        } else {
+          const parsed = JSON.parse(text);
+          let recs: string[] = Array.isArray(parsed.recomendaciones)
+            ? parsed.recomendaciones
+                .filter((r: unknown): r is string => typeof r === 'string' && r.trim().length > 0)
+                .map((r: string) => r.trim())
+            : [];
+          if (recs.length < 3) recs = recs.concat(FALLBACK_RECS).slice(0, 4);
+          recs = recs.slice(0, 5);
+          return {
+            available: true,
+            claridadNegocio: clampInt(parsed.claridadNegocio),
+            citabilidad: clampInt(parsed.citabilidad),
+            autoridad: clampInt(parsed.autoridad),
+            claridadGeografica: clampInt(parsed.claridadGeografica),
+            recomendaciones: recs,
+          };
+        }
+      } else {
+        const errText = await res.text().catch(() => '');
+        lastReason = 'http-' + res.status + ':' + errText.slice(0, 160);
+        // Errores de cliente (400 key/payload, 403 permiso) no se reintentan.
+        if (!TRANSIENT.has(res.status)) {
+          clearTimeout(timer);
+          return degraded(lastReason);
+        }
       }
-    );
-    if (!res.ok) {
-      console.error('Gemini HTTP error', res.status, '(400=key inválida, 403=permiso, 429=cuota)');
-      return degraded();
+    } catch (err) {
+      lastReason = 'exception:' + (err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+    } finally {
+      clearTimeout(timer);
     }
 
-    const data = (await res.json()) as any;
-    const candidate = data?.candidates?.[0];
-    const text: string | undefined = candidate?.content?.parts?.[0]?.text;
-    if (!text) {
-      console.error('Gemini sin texto', { finishReason: candidate?.finishReason });
-      return degraded();
-    }
-
-    const parsed = JSON.parse(text);
-    let recs: string[] = Array.isArray(parsed.recomendaciones)
-      ? parsed.recomendaciones
-          .filter((r: unknown): r is string => typeof r === 'string' && r.trim().length > 0)
-          .map((r: string) => r.trim())
-      : [];
-    if (recs.length < 3) recs = recs.concat(FALLBACK_RECS).slice(0, 4);
-    recs = recs.slice(0, 5);
-
-    return {
-      available: true,
-      claridadNegocio: clampInt(parsed.claridadNegocio),
-      citabilidad: clampInt(parsed.citabilidad),
-      autoridad: clampInt(parsed.autoridad),
-      claridadGeografica: clampInt(parsed.claridadGeografica),
-      recomendaciones: recs,
-    };
-  } catch (err) {
-    console.error('Gemini excepción:', err instanceof Error ? `${err.name}: ${err.message}` : err);
-    return degraded();
-  } finally {
-    clearTimeout(timer);
+    // Backoff antes del siguiente intento ante errores transitorios.
+    if (attempt < 3) await sleep(600 * attempt);
   }
+
+  return degraded(lastReason);
 }

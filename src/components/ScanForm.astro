@@ -10,28 +10,34 @@ const emailRequired = revealFlow === 'one-step';
 <form id="scan-form" class="scan-form" data-reveal-flow={revealFlow} novalidate>
   <div class="field">
     <label for="url">La dirección de tu sitio web</label>
-    <input
-      id="url"
-      name="url"
-      type="text"
-      inputmode="url"
-      autocomplete="url"
-      spellcheck="false"
-      placeholder="tunegocio.com"
-      required
-    />
+    <div class="input-wrap">
+      <span class="ico" aria-hidden="true">🔗</span>
+      <input
+        id="url"
+        name="url"
+        type="text"
+        inputmode="url"
+        autocomplete="url"
+        spellcheck="false"
+        placeholder="tunegocio.com"
+        required
+      />
+    </div>
   </div>
 
   <div class="field">
     <label for="email">Tu correo{emailRequired ? '' : ' (opcional)'}</label>
-    <input
-      id="email"
-      name="email"
-      type="email"
-      autocomplete="email"
-      placeholder="tucorreo@ejemplo.com"
-      required={emailRequired}
-    />
+    <div class="input-wrap">
+      <span class="ico" aria-hidden="true">✉️</span>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        autocomplete="email"
+        placeholder="tucorreo@ejemplo.com"
+        required={emailRequired}
+      />
+    </div>
   </div>
 
   <button type="submit" class="btn btn-primary btn-block" id="scan-btn">

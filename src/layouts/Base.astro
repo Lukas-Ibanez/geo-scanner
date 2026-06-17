@@ -24,7 +24,7 @@ import '../styles/global.css';
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     <meta name="robots" content="index,follow" />
-    <meta name="theme-color" content="#3b6ef6" />
+    <meta name="theme-color" content="#f9fbff" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -37,9 +37,20 @@ import '../styles/global.css';
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <slot name="head" />
   </head>
   <body>
+    <!-- blobs pastel de fondo (decorativos) -->
+    <div class="bg-blobs" aria-hidden="true">
+      <span class="blob blob-1"></span>
+      <span class="blob blob-2"></span>
+      <span class="blob blob-3"></span>
+    </div>
     <slot />
   </body>
 </html>

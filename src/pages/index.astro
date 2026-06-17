@@ -6,8 +6,7 @@ import ScanForm from '../components/ScanForm.astro';
 export const prerender = true;
 
 // Flujo de captura del correo. 'one-step' = correo junto a la URL.
-// 'two-step' = puntaje gratis + correo para revelar el detalle (lead magnet más fuerte).
-// El endpoint y la island soportan ambos; cambia esta constante para alternar.
+// 'two-step' = puntaje gratis + correo para revelar el detalle.
 const REVEAL_FLOW: 'one-step' | 'two-step' = 'one-step';
 
 const jsonLd = {
@@ -36,43 +35,28 @@ const jsonLd = {
   <main>
     <section class="hero">
       <div class="container">
-        <span class="eyebrow">Optimización para buscadores con IA (GEO)</span>
-        <h1>¿Te encuentran las IA cuando alguien busca lo que vendes?</h1>
+        <span class="eyebrow"><span class="pulse"></span> Optimización para buscadores con IA (GEO)</span>
+        <h1>¿Te encuentran <span class="grad">las IA</span> cuando alguien busca lo que vendes?</h1>
         <p class="lead">
           Escanea tu sitio gratis y descubre qué tan preparado está para aparecer en ChatGPT,
           Perplexity, Gemini y Google AI — con un puntaje claro y qué mejorar, sin tecnicismos.
         </p>
-        <section class="section section-center">
-          <div class="container">
-            <h2>Cómo funciona</h2>
-            <div class="steps">
-              <article class="step card">
-                <span class="num">1</span>
-                <h3>Pega tu dirección</h3>
-                <p>Escribe la web de tu negocio. No necesitas instalar ni configurar nada.</p>
-              </article>
-              <article class="step card">
-                <span class="num">2</span>
-                <h3>Analizamos como una IA</h3>
-                <p>Revisamos si las IA pueden leerte, entender qué ofreces y dónde operas.</p>
-              </article>
-              <article class="step card">
-                <span class="num">3</span>
-                <h3>Recibe tu plan</h3>
-                <p>Un puntaje claro y recomendaciones concretas, en lenguaje de negocio.</p>
-              </article>
-            </div>
-          </div>
-        </section>
 
         <div class="scan-card card">
           <ScanForm revealFlow={REVEAL_FLOW} />
         </div>
 
         <ul class="trust">
-          <li>✓ Gratis</li>
-          <li>✓ En segundos</li>
-          <li class="ai">Analiza para: ChatGPT · Perplexity · Gemini · Google AI</li>
+          <li class="chk">✓ Gratis</li>
+          <li class="sep">·</li>
+          <li class="chk">✓ En segundos</li>
+          <li class="sep">·</li>
+          <li class="engines">
+            <span class="engine">ChatGPT</span>
+            <span class="engine">Perplexity</span>
+            <span class="engine">Gemini</span>
+            <span class="engine">Google AI</span>
+          </li>
         </ul>
       </div>
     </section>
@@ -80,6 +64,30 @@ const jsonLd = {
     <section class="container">
       <!-- La island renderiza aquí el loading y el resultado -->
       <div id="scan-output" hidden></div>
+    </section>
+
+    <section class="section section-center">
+      <div class="container">
+        <h2>Cómo funciona</h2>
+        <p class="sub">En tres pasos simples obtienes un diagnóstico claro de tu visibilidad ante las IA.</p>
+        <div class="steps">
+          <article class="step card">
+            <span class="num">1</span>
+            <h3>Pega tu dirección</h3>
+            <p>Escribe la web de tu negocio. No necesitas instalar ni configurar nada.</p>
+          </article>
+          <article class="step card">
+            <span class="num">2</span>
+            <h3>Analizamos como una IA</h3>
+            <p>Revisamos si las IA pueden leerte, entender qué ofreces y dónde operas.</p>
+          </article>
+          <article class="step card">
+            <span class="num">3</span>
+            <h3>Recibe tu plan</h3>
+            <p>Un puntaje claro y recomendaciones concretas, en lenguaje de negocio.</p>
+          </article>
+        </div>
+      </div>
     </section>
   </main>
 

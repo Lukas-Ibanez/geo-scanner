@@ -53,6 +53,7 @@ export interface ContentResult {
   autoridad: number;
   claridadGeografica: number;
   recomendaciones: string[];
+  debug?: string; // motivo del degradado (diagnóstico)
 }
 
 export interface SubScores {

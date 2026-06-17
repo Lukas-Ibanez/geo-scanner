@@ -1,5 +1,5 @@
 // Island del escáner (vanilla JS, sin framework). Maneja submit, loading por
-// pasos, render del resultado y el gating (teaser → desbloqueo con correo).
+// pasos, render del resultado (gauge SVG animado) y el gating (teaser → desbloqueo).
 
 const ENDPOINT = '/api/scan';
 // CTA final → sección de servicios del portafolio. Cambia esta URL si hace falta.
@@ -43,10 +43,10 @@ function el(tag: string, cls?: string): HTMLElement {
   return node;
 }
 
-function band(score: number): { col: string } {
-  if (score >= 70) return { col: 'var(--good)' };
-  if (score >= 45) return { col: 'var(--mid)' };
-  return { col: 'var(--bad)' };
+function band(score: number): string {
+  if (score >= 70) return 'var(--good)';
+  if (score >= 45) return 'var(--mid)';
+  return 'var(--bad)';
 }
 
 export function initScanner(): void {
@@ -102,8 +102,7 @@ function renderLoading(output: HTMLElement): () => void {
   output.innerHTML = '';
   const box = el('div', 'loading card');
   box.appendChild(el('div', 'spinner'));
-  const title = el('p');
-  title.style.fontWeight = '700';
+  const title = el('p', 'loading-title');
   title.textContent = 'Escaneando tu sitio…';
   box.appendChild(title);
 
@@ -135,12 +134,74 @@ function renderError(output: HTMLElement, message: string): void {
   output.innerHTML = '';
   const box = el('div', 'loading card');
   const p = el('p');
-  p.style.color = '#8f2a2d';
+  p.style.color = '#9a2b2b';
   p.style.fontWeight = '600';
   p.textContent = message;
   box.appendChild(p);
   output.appendChild(box);
   output.hidden = false;
+}
+
+function animateNumber(node: HTMLElement, to: number, dur: number): void {
+  const start = performance.now();
+  const step = (t: number) => {
+    const p = Math.min(1, (t - start) / dur);
+    node.textContent = String(Math.round(p * to));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function buildGauge(score: number, color: string): HTMLElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const size = 200;
+  const stroke = 16;
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+
+  const wrap = el('div', 'gauge');
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.setAttribute('class', 'gauge-svg');
+
+  const mk = (cls: string) => {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', String(size / 2));
+    c.setAttribute('cy', String(size / 2));
+    c.setAttribute('r', String(r));
+    c.setAttribute('fill', 'none');
+    c.setAttribute('stroke-width', String(stroke));
+    c.setAttribute('class', cls);
+    return c;
+  };
+
+  const track = mk('gauge-track');
+  const prog = mk('gauge-prog');
+  prog.setAttribute('stroke-linecap', 'round');
+  prog.setAttribute('stroke', color);
+  prog.style.strokeDasharray = String(circ);
+  prog.style.strokeDashoffset = String(circ);
+  svg.appendChild(track);
+  svg.appendChild(prog);
+
+  const center = el('div', 'gauge-center');
+  const num = el('div', 'gauge-num');
+  num.style.color = color;
+  num.textContent = '0';
+  const den = el('div', 'gauge-den');
+  den.textContent = '/ 100';
+  center.appendChild(num);
+  center.appendChild(den);
+
+  wrap.appendChild(svg);
+  wrap.appendChild(center);
+
+  requestAnimationFrame(() => {
+    prog.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)';
+    prog.style.strokeDashoffset = String(circ * (1 - Math.max(0, Math.min(100, score)) / 100));
+    animateNumber(num, score, 1100);
+  });
+  return wrap;
 }
 
 function subscoreRow(label: string, val: number): HTMLElement {
@@ -161,39 +222,27 @@ function subscoreRow(label: string, val: number): HTMLElement {
 
 function renderResult(output: HTMLElement, r: ScanResult): void {
   output.innerHTML = '';
-  const card = el('div', 'result card');
+  const card = el('div', 'result-card card');
+  const color = band(r.finalScore);
 
-  // --- Puntaje + veredicto ---
-  const top = el('div', 'result-top');
-  const ring = el('div', 'score-ring');
-  const b = band(r.finalScore);
-  ring.style.setProperty('--ring', b.col);
-  const inner = el('div', 'inner');
-  const num = el('div', 'num');
-  num.textContent = String(r.finalScore);
-  num.style.color = b.col;
-  const den = el('div', 'den');
-  den.textContent = 'de 100';
-  inner.appendChild(num);
-  inner.appendChild(den);
-  ring.appendChild(inner);
-  top.appendChild(ring);
+  // --- Cabecera: gauge + veredicto ---
+  const head = el('div', 'result-head');
+  head.appendChild(buildGauge(r.finalScore, color));
 
   const verdict = el('div', 'verdict');
-  const h2 = el('h2');
-  h2.textContent = 'Tu puntaje GEO';
-  const vp = el('p');
-  vp.textContent = r.verdict;
-  verdict.appendChild(h2);
-  verdict.appendChild(vp);
+  const eyebrow = el('div', 'verdict-eyebrow');
+  eyebrow.textContent = 'Tu puntaje GEO';
+  const vtext = el('p', 'verdict-text');
+  vtext.textContent = r.verdict;
+  verdict.appendChild(eyebrow);
+  verdict.appendChild(vtext);
   if (r.blocksAiBots) {
     const alert = el('div', 'badge-alert');
     alert.textContent = '⚠ Tu sitio está bloqueando a los robots de IA.';
     verdict.appendChild(alert);
   }
-  top.appendChild(verdict);
-  card.appendChild(top);
-  requestAnimationFrame(() => ring.style.setProperty('--pct', String(r.finalScore)));
+  head.appendChild(verdict);
+  card.appendChild(head);
 
   // --- Subscores ---
   const subs = el('div', 'subscores');
@@ -210,7 +259,7 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
   card.appendChild(subs);
 
   if (!r.aiAnalysisAvailable) {
-    const note = el('p', 'meta-note');
+    const note = el('p', 'ai-note');
     note.textContent =
       'El análisis de contenido con IA no estuvo disponible en este momento; te mostramos tu puntaje técnico. Vuelve a intentarlo más tarde para el análisis completo.';
     card.appendChild(note);
@@ -239,7 +288,7 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
 
   card.appendChild(renderCta());
 
-  const meta = el('p', 'meta-note');
+  const meta = el('p', 'result-meta');
   meta.textContent = `Escaneo de ${r.domain}${r.fromCache ? ' · resultado reciente (en caché)' : ''}.`;
   card.appendChild(meta);
 
@@ -284,7 +333,7 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
 
   const err = el('p', 'form-error');
   err.hidden = true;
-  err.style.marginTop = '10px';
+  err.style.marginTop = '12px';
 
   box.appendChild(form);
   box.appendChild(err);
