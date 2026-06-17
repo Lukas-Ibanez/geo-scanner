@@ -93,7 +93,16 @@ async function runScan(
     stopLoading();
 
     if (!res.ok) {
-      const msg = (json && 'error' in json && json.error) || 'Algo salió mal. Inténtalo de nuevo en un momento.';
+      let msg = (json && 'error' in json && json.error) || '';
+      if (!msg) {
+        // Sin JSON de error (p.ej. 502 de plataforma cuando el sitio destino está
+        // protegido por Cloudflare y no es alcanzable): mensaje claro y honesto en
+        // vez de sugerir un reintento que no va a ayudar.
+        msg =
+          res.status >= 500
+            ? 'No pudimos leer este sitio. Puede estar protegido contra lectores automáticos o no estar disponible en este momento. Prueba con otra página.'
+            : 'Algo salió mal. Inténtalo de nuevo en un momento.';
+      }
       renderError(output, msg);
       return;
     }

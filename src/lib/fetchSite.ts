@@ -44,26 +44,42 @@ async function readCapped(res: Response, maxBytes: number): Promise<string> {
   return out;
 }
 
+const FAILED = (url: string): FetchTextResult => ({ ok: false, status: 0, text: '', finalUrl: url });
+
 async function fetchText(url: string, timeoutMs: number, maxBytes: number): Promise<FetchTextResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-      },
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-    const text = await readCapped(res, maxBytes);
-    return { ok: res.ok, status: res.status, text, finalUrl: res.url || url };
-  } catch {
-    return { ok: false, status: 0, text: '', finalUrl: url };
-  } finally {
-    clearTimeout(timer);
-  }
+
+  const work = (async (): Promise<FetchTextResult> => {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+        },
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      const text = await readCapped(res, maxBytes);
+      return { ok: res.ok, status: res.status, text, finalUrl: res.url || url };
+    } catch {
+      return FAILED(url);
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+
+  // Guard duro: si el sitio destino está detrás de Cloudflare (orange-to-orange) o
+  // su cuerpo se transmite "goteando", el AbortController puede no cancelar un
+  // `reader.read()` colgado y el Worker excedería su tiempo → 502 crudo de la
+  // plataforma (se salta nuestro manejo de errores). Este race garantiza que
+  // fetchText SIEMPRE resuelva; la promesa colgada se abandona sin esperarla.
+  const guard = new Promise<FetchTextResult>((resolve) =>
+    setTimeout(() => resolve(FAILED(url)), timeoutMs + 1500)
+  );
+
+  return Promise.race([work, guard]);
 }
 
 export async function fetchSite(origin: string, url: string): Promise<FetchedSite> {
