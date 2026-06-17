@@ -71,10 +71,17 @@ export function initScanner(): void {
   });
 }
 
-async function runScan(output: HTMLElement, body: { url: string; email?: string }): Promise<void> {
+async function runScan(
+  output: HTMLElement,
+  body: { url: string; email?: string },
+  opts: { unlock?: boolean } = {}
+): Promise<void> {
   const btn = document.getElementById('scan-btn') as HTMLButtonElement | null;
   if (btn) btn.disabled = true;
-  const stopLoading = renderLoading(output);
+  // En el paso de desbloqueo NO mostramos la animación de escaneo (confunde: parece
+  // que vuelve a escanear). Mantenemos el resultado en pantalla; el botón del
+  // formulario ya indica "Enviando…" mientras se procesa.
+  const stopLoading = opts.unlock ? () => {} : renderLoading(output);
 
   try {
     const res = await fetch(ENDPOINT, {
@@ -359,7 +366,7 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     lastEmail = email;
-    await runScan(output, { url: lastUrl, email });
+    await runScan(output, { url: lastUrl, email }, { unlock: true });
   });
 
   return box;
