@@ -5,6 +5,16 @@ import { SYSTEM_INSTRUCTION, buildUserPrompt, degraded, finalizeResult } from '.
 
 // Modelo por defecto: soporta JSON mode y es rápido. Configurable por env.
 const DEFAULT_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+// Tope de espera: el binding AI no aborta solo y Llama 70B puede tardar; sin esto
+// un escaneo podía colgarse minutos. Si se supera, degradamos.
+const AI_TIMEOUT_MS = 30000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`timeout-${ms}ms`)), ms)),
+  ]);
+}
 
 // JSON Schema estándar (distinto al subconjunto OpenAPI de Gemini).
 const JSON_SCHEMA = {
@@ -24,15 +34,18 @@ export async function evaluateWithWorkersAI(signals: SiteSignals, env: Env): Pro
   const model = env.WORKERSAI_MODEL || DEFAULT_MODEL;
 
   try {
-    const result = (await env.AI.run(model, {
-      messages: [
-        { role: 'system', content: SYSTEM_INSTRUCTION },
-        { role: 'user', content: buildUserPrompt(signals) },
-      ],
-      response_format: { type: 'json_schema', json_schema: JSON_SCHEMA },
-      max_tokens: 1500,
-      temperature: 0.4,
-    })) as { response?: unknown };
+    const result = (await withTimeout(
+      env.AI.run(model, {
+        messages: [
+          { role: 'system', content: SYSTEM_INSTRUCTION },
+          { role: 'user', content: buildUserPrompt(signals) },
+        ],
+        response_format: { type: 'json_schema', json_schema: JSON_SCHEMA },
+        max_tokens: 1024,
+        temperature: 0.4,
+      }),
+      AI_TIMEOUT_MS
+    )) as { response?: unknown };
 
     const raw = result?.response;
     let parsed: Record<string, unknown> | null = null;

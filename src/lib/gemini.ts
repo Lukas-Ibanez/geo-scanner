@@ -4,7 +4,8 @@ import type { SiteSignals, ContentResult } from './types';
 import { SYSTEM_INSTRUCTION, buildUserPrompt, degraded, finalizeResult } from './contentShared';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 12000;
+const MAX_ATTEMPTS = 2; // menos reintentos: en modo híbrido el respaldo (Workers AI) entra antes
 
 // responseSchema de Gemini (subconjunto de OpenAPI) → fuerza JSON válido.
 const RESPONSE_SCHEMA = {
@@ -69,7 +70,7 @@ export async function evaluateWithGemini(signals: SiteSignals, env: Env): Promis
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   let lastReason = 'unknown';
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
@@ -105,7 +106,7 @@ export async function evaluateWithGemini(signals: SiteSignals, env: Env): Promis
     }
 
     // Backoff antes del siguiente intento ante errores transitorios.
-    if (attempt < 3) await sleep(600 * attempt);
+    if (attempt < MAX_ATTEMPTS) await sleep(600 * attempt);
   }
 
   return degraded(lastReason);
