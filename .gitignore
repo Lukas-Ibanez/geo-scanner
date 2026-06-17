@@ -13,6 +13,9 @@ dist/
 # deps
 node_modules/
 
+# preview local del correo (no es parte del sitio)
+email-preview.html
+
 # logs / os
 *.log
 npm-debug.log*

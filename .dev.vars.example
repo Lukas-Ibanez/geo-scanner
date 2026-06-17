@@ -2,6 +2,15 @@
 # Obtén una clave gratis en https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=tu_clave_de_google_ai_studio
 
+# --- Envío del informe por correo (Resend) ---
+# Clave gratis en https://resend.com (3.000 emails/mes). Si se omite, no se envía
+# correo (el informe igual se muestra en pantalla y el lead se guarda).
+# RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+# Remitente: debe estar en un dominio verificado en Resend.
+# RESEND_FROM=GEO Scanner <informe@geo.lukasibanez.dev>
+# Correo de respuesta (opcional)
+# RESEND_REPLY_TO=hola@lukasibanez.dev
+
 # --- Opcionales (tienen defaults razonables en el código) ---
 # Modelo de Gemini a usar (capa gratuita de Google AI Studio)
 # GEMINI_MODEL=gemini-2.5-flash

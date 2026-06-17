@@ -1,10 +1,14 @@
 ---
 interface Props {
-  /** one-step: pide el correo junto a la URL. two-step: el correo es opcional (se pide luego para revelar el detalle). */
+  /** one-step: pide el correo junto a la URL. two-step: solo pide la URL; el correo se pide luego para recibir el informe. */
   revealFlow?: 'one-step' | 'two-step';
 }
 const { revealFlow = 'one-step' } = Astro.props;
 const emailRequired = revealFlow === 'one-step';
+const hint =
+  revealFlow === 'two-step'
+    ? 'Gratis · sin instalar nada · resultados en segundos'
+    : 'Gratis · resultados en segundos';
 ---
 
 <form id="scan-form" class="scan-form" data-reveal-flow={revealFlow} novalidate>
@@ -25,25 +29,31 @@ const emailRequired = revealFlow === 'one-step';
     </div>
   </div>
 
-  <div class="field">
-    <label for="email">Tu correo{emailRequired ? '' : ' (opcional)'}</label>
-    <div class="input-wrap">
-      <span class="ico" aria-hidden="true">✉️</span>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        autocomplete="email"
-        placeholder="tucorreo@ejemplo.com"
-        required={emailRequired}
-      />
-    </div>
-  </div>
+  {
+    /* En two-step el correo NO se pide aquí: primero entregamos el puntaje y luego
+       pedimos el correo para enviar el informe completo (ver scanner-island). */
+    emailRequired && (
+      <div class="field">
+        <label for="email">Tu correo</label>
+        <div class="input-wrap">
+          <span class="ico" aria-hidden="true">✉️</span>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="tucorreo@ejemplo.com"
+            required
+          />
+        </div>
+      </div>
+    )
+  }
 
   <button type="submit" class="btn btn-primary btn-block" id="scan-btn">
     Escanear mi sitio gratis
   </button>
 
-  <p class="form-hint">Gratis · sin registro · resultados en segundos</p>
+  <p class="form-hint">{hint}</p>
   <p class="form-error" id="form-error" role="alert" hidden></p>
 </form>

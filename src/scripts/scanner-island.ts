@@ -36,6 +36,7 @@ const LOAD_STEPS = [
 ];
 
 let lastUrl = '';
+let lastEmail = '';
 
 function el(tag: string, cls?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -65,6 +66,7 @@ export function initScanner(): void {
     }
     clearFormError(form);
     lastUrl = url;
+    lastEmail = email;
     await runScan(output, { url, email: email || undefined });
   });
 }
@@ -267,6 +269,11 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
 
   // --- Recomendaciones (full) o desbloqueo (teaser) ---
   if (!r.locked && r.recommendations && r.recommendations.length) {
+    if (lastEmail) {
+      const sent = el('div', 'sent-note');
+      sent.textContent = `✓ Te enviamos el informe detallado a ${lastEmail}.`;
+      card.appendChild(sent);
+    }
     const title = el('h3', 'section-title');
     title.textContent = 'Qué mejorar (en orden de impacto)';
     card.appendChild(title);
@@ -305,14 +312,16 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
 function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   const box = el('div', 'unlock');
   const h = el('h3');
-  h.textContent = 'Desbloquea tus recomendaciones';
+  h.textContent = 'Recibe tu informe completo';
   const p = el('p');
   const count = el('span', 'locked-count');
   count.textContent = String(r.recommendationsCount);
   p.appendChild(document.createTextNode('Detectamos '));
   p.appendChild(count);
   p.appendChild(
-    document.createTextNode(' mejoras concretas para tu sitio. Déjanos tu correo y te las mostramos al instante.')
+    document.createTextNode(
+      ' mejoras concretas para tu sitio. Déjame tu correo: aquí verás el resumen al instante y te envío el informe detallado (diagnóstico técnico punto por punto y plan priorizado) a tu correo.'
+    )
   );
   box.appendChild(h);
   box.appendChild(p);
@@ -327,7 +336,7 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   const btn = document.createElement('button');
   btn.type = 'submit';
   btn.className = 'btn btn-primary';
-  btn.textContent = 'Ver mis mejoras';
+  btn.textContent = 'Enviarme el informe';
   form.appendChild(input);
   form.appendChild(btn);
 
@@ -348,7 +357,8 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     }
     err.hidden = true;
     btn.disabled = true;
-    btn.textContent = 'Desbloqueando…';
+    btn.textContent = 'Enviando…';
+    lastEmail = email;
     await runScan(output, { url: lastUrl, email });
   });
 
@@ -358,10 +368,10 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
 function renderCta(): HTMLElement {
   const box = el('div', 'cta');
   const h = el('h2');
-  h.textContent = '¿Quieres que implementemos estas mejoras por ti?';
+  h.textContent = '¿Quieres que lo implemente por ti? Hablemos';
   const p = el('p');
   p.textContent =
-    'Optimizamos tu sitio para que las IA te encuentren, te entiendan y te recomienden. Tú te concentras en tu negocio.';
+    'Optimizo tu sitio para que las IA te encuentren, te entiendan y te recomienden. Tú te concentras en tu negocio.';
   const a = document.createElement('a');
   a.href = CTA_URL;
   a.className = 'btn btn-primary';

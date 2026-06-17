@@ -1,15 +1,35 @@
 # GEO Scanner
 
-> Herramienta web gratuita que audita qué tan preparado está un sitio para aparecer y ser citado por motores de búsqueda generativos (ChatGPT, Perplexity, Gemini, Google AI Overviews).
+> Herramienta web gratuita que audita qué tan preparado está un sitio para aparecer y ser citado por motores de búsqueda generativos (ChatGPT, Perplexity, Gemini, Google AI Overviews). Entrega un puntaje de 0 a 100 y recomendaciones en lenguaje de dueño de negocio.
 
-GEO Scanner analiza una URL y entrega un puntaje de 0 a 100 más recomendaciones en lenguaje de dueño de negocio sobre cómo mejorar su visibilidad ante las IA. Está pensado para negocios no técnicos.
+GEO Scanner analiza una URL y devuelve un puntaje más un plan de mejoras para aumentar la visibilidad del sitio ante las IA. Está pensado para negocios no técnicos: no requiere instalar nada ni crear una cuenta, solo pegar la dirección del sitio. El informe completo se entrega en pantalla y, si el usuario deja su correo, también se envía por email.
+
+## Qué es GEO
+GEO (Generative Engine Optimization) es la práctica de optimizar un sitio para que las IA lo entiendan, confíen en él y lo citen dentro de sus respuestas. Se diferencia del SEO en que el SEO busca posicionar enlaces en Google, mientras que el GEO busca ser la fuente que la IA menciona al responder.
 
 ## Qué evalúa
-- Si los robots de IA tienen permiso para leer el sitio.
-- Si queda claro qué ofrece el negocio y en qué zona/ciudad opera.
+- Si los robots de IA tienen permiso para leer el sitio (robots.txt, bloqueos).
+- Si queda claro qué ofrece el negocio y en qué zona o ciudad opera.
 - Si el contenido es claro, citable y muestra señales de autoridad.
-- Buenas prácticas técnicas que ayudan a la IA a entender el sitio.
+- Buenas prácticas técnicas que ayudan a la IA a entender el sitio (estructura, metadatos, datos estructurados).
+
+## Cómo funciona
+1. El usuario pega la dirección de su sitio.
+2. La herramienta analiza el sitio como lo haría una IA.
+3. Entrega un puntaje de 0 a 100 y recomendaciones priorizadas por impacto.
+
+## Preguntas frecuentes
+- ¿Es gratis? Sí, el escaneo y el informe son gratuitos.
+- ¿Qué necesito? Solo la URL del sitio; no se instala ni se configura nada.
+- ¿En qué se diferencia del SEO? El SEO posiciona enlaces; el GEO busca que la IA te cite y recomiende.
+
+## Origen y público
+Hecha en Chile por Lukas Ibáñez, está pensada para negocios de habla hispana en Latinoamérica y España. La interfaz y los informes están en español.
+
+## Servicio relacionado
+Lukas Ibáñez, desarrollador web con experiencia real en infraestructura, SEO y sitios en producción, ofrece implementar estas mejoras de GEO por encargo.
 
 ## Enlaces
 - Sitio: https://geo.lukasibanez.dev
 - Servicios y contacto: https://lukasibanez.dev
+- Código y proyectos (GitHub): https://github.com/Lukas-Ibanez

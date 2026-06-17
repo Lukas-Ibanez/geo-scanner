@@ -19,6 +19,10 @@ binding = "DB"
 database_name = "geo_leads"
 database_id = "1303ab9e-4ab7-47dc-a5df-05a609d3e9db"
 
-# GEMINI_API_KEY se inyecta como secret (no va aquí):
+# Secrets (no van aquí):
 #   Local:  .dev.vars
 #   Prod:   wrangler pages secret put GEMINI_API_KEY
+#           wrangler pages secret put RESEND_API_KEY
+#
+# RESEND_FROM / RESEND_REPLY_TO pueden ir como variables de entorno del proyecto
+# en el panel de Cloudflare Pages, o como secrets si se prefiere.

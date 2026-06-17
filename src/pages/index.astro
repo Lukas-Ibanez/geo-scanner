@@ -6,20 +6,104 @@ import ScanForm from '../components/ScanForm.astro';
 export const prerender = true;
 
 // Flujo de captura del correo. 'one-step' = correo junto a la URL.
-// 'two-step' = puntaje gratis + correo para revelar el detalle.
-const REVEAL_FLOW: 'one-step' | 'two-step' = 'one-step';
+// 'two-step' = puntaje gratis + correo para recibir el informe completo.
+const REVEAL_FLOW: 'one-step' | 'two-step' = 'two-step';
+
+const SITE = 'https://geo.lukasibanez.dev';
+const AUTHOR_URL = 'https://lukasibanez.dev';
+const GITHUB_URL = 'https://github.com/Lukas-Ibanez';
+
+// FAQ: una sola fuente de verdad → se renderiza visible y alimenta el schema FAQPage.
+const faqs = [
+  {
+    q: '¿Qué es GEO?',
+    a: 'GEO (Generative Engine Optimization) es optimizar tu sitio para aparecer y ser citado en las respuestas de los buscadores con IA, como ChatGPT, Perplexity, Gemini y los resúmenes de IA de Google. En vez de competir solo por un lugar en la lista de enlaces, buscas que la IA te entienda y te recomiende dentro de su respuesta.',
+  },
+  {
+    q: '¿En qué se diferencia del SEO?',
+    a: 'El SEO busca posicionar tu página entre los enlaces azules de Google. El GEO busca que la inteligencia artificial comprenda qué ofreces, confíe en tu sitio y te cite cuando alguien pregunta por lo que vendes. Son complementarios: un buen SEO ayuda, pero no garantiza que la IA te mencione.',
+  },
+  {
+    q: '¿Es gratis?',
+    a: 'Sí. El escaneo, el puntaje y el informe con recomendaciones son gratis. Solo te pido tu correo para enviarte el informe completo y el plan de mejoras; no necesitas crear una cuenta.',
+  },
+  {
+    q: '¿Qué necesito para usarlo?',
+    a: 'Solo la dirección de tu sitio web. No tienes que instalar nada, ni configurar nada, ni dar acceso a tus cuentas. Pegas la URL y en segundos tienes tu diagnóstico.',
+  },
+  {
+    q: '¿Cómo se calcula el puntaje?',
+    a: 'Analizamos tu sitio como lo haría una IA: si los robots de IA pueden leerlo, si queda claro qué ofreces y en qué zona operas, y qué tan citable y confiable es tu contenido. Combinamos esas señales en un puntaje de 0 a 100 con recomendaciones en lenguaje de negocio.',
+  },
+  {
+    q: '¿Qué hacen con mis datos?',
+    a: 'Guardamos tu correo y la URL escaneada para enviarte el informe y, si te interesa, contarte cómo implementar las mejoras. No compartimos ni vendemos tu información.',
+  },
+];
 
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'WebApplication',
-  name: 'GEO Scanner',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  inLanguage: 'es',
-  url: 'https://geo.lukasibanez.dev',
-  description:
-    'Herramienta gratuita que audita qué tan preparado está tu sitio web para aparecer en respuestas de IA como ChatGPT, Perplexity, Gemini y Google AI Overviews.',
-  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  '@graph': [
+    {
+      '@type': 'Person',
+      '@id': `${AUTHOR_URL}/#lukas`,
+      name: 'Lukas Ibáñez',
+      url: AUTHOR_URL,
+      jobTitle: 'Desarrollador web',
+      description:
+        'Desarrollador web con experiencia real en infraestructura, SEO y sitios en producción. Optimiza sitios para que las IA los encuentren, entiendan y recomienden (GEO).',
+      knowsAbout: [
+        'GEO (Generative Engine Optimization)',
+        'SEO',
+        'Desarrollo web',
+        'Infraestructura web',
+        'Cloudflare',
+      ],
+      sameAs: [AUTHOR_URL, GITHUB_URL],
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${AUTHOR_URL}/#organization`,
+      name: 'Lukas Ibáñez',
+      url: AUTHOR_URL,
+      founder: { '@id': `${AUTHOR_URL}/#lukas` },
+      areaServed: ['CL', 'Latinoamérica', 'España'],
+      knowsLanguage: 'es',
+      sameAs: [GITHUB_URL],
+      description:
+        'Desarrollo web y optimización para buscadores con IA (GEO), con base en Chile y enfoque en negocios de habla hispana.',
+    },
+    {
+      '@type': 'WebApplication',
+      '@id': `${SITE}/#webapp`,
+      name: 'GEO Scanner',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'es-CL',
+      url: SITE,
+      description:
+        'Herramienta gratuita que audita qué tan preparado está tu sitio web para aparecer en respuestas de IA como ChatGPT, Perplexity, Gemini y Google AI Overviews. Hecha en Chile para negocios de habla hispana.',
+      isAccessibleForFree: true,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      author: { '@id': `${AUTHOR_URL}/#lukas` },
+      creator: { '@id': `${AUTHOR_URL}/#lukas` },
+      publisher: { '@id': `${AUTHOR_URL}/#organization` },
+      audience: {
+        '@type': 'Audience',
+        audienceType: 'Dueños de negocios y emprendedores de habla hispana',
+        geographicArea: { '@type': 'Place', name: 'Latinoamérica y España' },
+      },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE}/#faq`,
+      mainEntity: faqs.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    },
+  ],
 };
 ---
 
@@ -58,12 +142,74 @@ const jsonLd = {
             <span class="engine">Google AI</span>
           </li>
         </ul>
+
+        <p class="author-trust">
+          Hecho en Chile por <a href={AUTHOR_URL} rel="author">Lukas Ibáñez</a>, desarrollador web con
+          experiencia real en infraestructura, SEO y sitios en producción —
+          los mismos fundamentos con que se construyó esta herramienta. Pensada para negocios de
+          habla hispana en Latinoamérica y España. <a href={GITHUB_URL} rel="me">Ver código y proyectos</a>.
+        </p>
       </div>
     </section>
 
     <section class="container">
       <!-- La island renderiza aquí el loading y el resultado -->
       <div id="scan-output" hidden></div>
+    </section>
+
+    <!-- Muestra estática de cómo se ve el informe (preview, no es un resultado real) -->
+    <section class="section">
+      <div class="container">
+        <div class="preview-head section-center">
+          <h2>Así se ve tu informe</h2>
+          <p class="sub">Un puntaje claro y recomendaciones en lenguaje de negocio. Esto es un ejemplo.</p>
+        </div>
+
+        <div class="preview-card card" aria-hidden="true">
+          <span class="preview-tag">Ejemplo</span>
+          <div class="preview-top">
+            <div class="preview-gauge">
+              <svg viewBox="0 0 140 140" class="preview-gauge-svg">
+                <circle class="pg-track" cx="70" cy="70" r="63" fill="none" stroke-width="14"></circle>
+                <circle
+                  class="pg-prog"
+                  cx="70"
+                  cy="70"
+                  r="63"
+                  fill="none"
+                  stroke-width="14"
+                  stroke-linecap="round"
+                  stroke-dasharray="395.84"
+                  stroke-dashoffset="110.84"
+                ></circle>
+              </svg>
+              <div class="preview-gauge-center">
+                <span class="pg-num">72</span><span class="pg-den">/ 100</span>
+              </div>
+            </div>
+            <div class="preview-verdict">
+              <div class="verdict-eyebrow">Tu puntaje GEO</div>
+              <p class="verdict-text">Vas por buen camino, pero las IA todavía pierden señales clave de tu negocio.</p>
+            </div>
+          </div>
+
+          <h3 class="section-title">Qué mejorar (en orden de impacto)</h3>
+          <div class="recs">
+            <div class="rec">
+              <div class="ico">1</div>
+              <p>Tu sitio no dice con claridad en qué ciudad o zona operas, así que las IA no saben a quién recomendarte por ubicación.</p>
+            </div>
+            <div class="rec">
+              <div class="ico">2</div>
+              <p>Falta una sección de preguntas frecuentes que la IA pueda citar como respuesta directa cuando alguien pregunta por tu rubro.</p>
+            </div>
+            <div class="rec">
+              <div class="ico">3</div>
+              <p>Tu página de inicio no explica en una sola frase qué vende tu negocio, lo que confunde a la IA al describirte.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="section section-center">
@@ -89,11 +235,34 @@ const jsonLd = {
         </div>
       </div>
     </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-center">
+          <h2>Preguntas frecuentes</h2>
+          <p class="sub">Lo que la gente suele preguntar sobre GEO y esta herramienta.</p>
+        </div>
+        <div class="faq">
+          {
+            faqs.map((f) => (
+              <details class="faq-item">
+                <summary>{f.q}</summary>
+                <p>{f.a}</p>
+              </details>
+            ))
+          }
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <p>GEO Scanner · una herramienta de <a href="https://lukasibanez.dev">lukasibanez.dev</a></p>
+      <p>
+        GEO Scanner · una herramienta de <a href={AUTHOR_URL}>lukasibanez.dev</a> ·
+        <a href={GITHUB_URL}>GitHub</a><br />
+        Hecho en Chile 🇨🇱 para negocios de habla hispana en Latinoamérica y España.
+      </p>
     </div>
   </footer>
 

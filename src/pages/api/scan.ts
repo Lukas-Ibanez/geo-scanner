@@ -10,6 +10,7 @@ import { isEntitled, projectForClient } from '../../lib/entitlement';
 import { getCachedScan, putCachedScan } from '../../lib/cache';
 import { checkRateLimit } from '../../lib/rateLimit';
 import { saveLead } from '../../lib/leads';
+import { sendReportEmail } from '../../lib/email';
 
 export const prerender = false;
 
@@ -120,8 +121,19 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     });
   }
 
-  // 8) Devolver la proyección según el acceso (teaser vs full)
-  return json(projectForClient(full, entitled), 200);
+  // 8) Proyectar según el acceso (teaser vs full)
+  const projected = projectForClient(full, entitled);
+
+  // 9) Enviar el informe por correo cuando el lead desbloqueó el detalle.
+  //    Best-effort en segundo plano (waitUntil) para no añadir latencia a la respuesta.
+  if (email && entitled && projected.recommendations && projected.recommendations.length) {
+    const send = sendReportEmail(env, email, projected);
+    const waitUntil = locals.runtime.ctx?.waitUntil?.bind(locals.runtime.ctx);
+    if (waitUntil) waitUntil(send);
+    else await send;
+  }
+
+  return json(projected, 200);
   } catch (err) {
     // Red de seguridad: cualquier error inesperado devuelve JSON limpio (no una
     // página de error 500), para que el cliente muestre un mensaje y se pueda ver
