@@ -1,5 +1,12 @@
-// Extracción de señales del HTML usando HTMLRewriter (nativo de Workers).
-// NO usa cheerio ni APIs de Node. Hace streaming parsing (liviano en CPU).
+// Extracción de señales del HTML.
+// - Señales estructuradas (title, headings, meta, JSON-LD, lang): HTMLRewriter
+//   nativo de Workers (streaming, liviano).
+// - Texto visible principal: extracción por regex sobre el HTML completo. Antes
+//   se usaba un handler de texto sobre '*'/'body' con un contador skipDepth, pero
+//   en HTMLRewriter los handlers de texto solo reciben el texto INMEDIATO del
+//   elemento (y '*' no captura), así que mainText salía SIEMPRE vacío y la IA
+//   recibía el sitio "sin contenido". El regex de una sola pasada es robusto para
+//   sitios arbitrarios y barato (el HTML ya viene capado a ~800 KB por fetchSite).
 import type { SiteSignals } from './types';
 
 // Interfaces mínimas para anotar los handlers sin chocar con el tipo global
@@ -13,9 +20,32 @@ interface RWText {
   lastInTextNode: boolean;
 }
 
-const MAX_CHARS = 18000; // ~3.000 palabras; acota memoria y, sobre todo, el CPU del parseo
-// Elementos cuyo texto NO es contenido visible útil (se excluyen de mainText).
-const SKIP_TAGS = ['head', 'script', 'style', 'noscript', 'template', 'svg', 'iframe'];
+const MAX_CHARS = 18000; // ~3.000 palabras; acota lo que se le manda a la IA.
+
+/** Decodifica las entidades HTML más comunes (suficiente para texto de análisis). */
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n: string) => {
+      const code = parseInt(n, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : ' ';
+    });
+}
+
+/** Texto visible del <body>, sin head/script/style/svg/etc. */
+function extractVisibleText(html: string): string {
+  const s = html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<head[\s\S]*?<\/head>/gi, ' ')
+    .replace(/<(script|style|svg|noscript|template|iframe)\b[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+  return decodeEntities(s).replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
+}
 
 export async function parseHtml(html: string): Promise<SiteSignals> {
   const signals: SiteSignals = {
@@ -32,19 +62,6 @@ export async function parseHtml(html: string): Promise<SiteSignals> {
     lang: null,
     mainText: '',
     wordCount: 0,
-  };
-
-  // Acumulación de texto visible con tope de palabras.
-  let skipDepth = 0;
-  let charCount = 0;
-  const parts: string[] = [];
-  // Handler O(1): solo acumula texto crudo; la limpieza de espacios se hace UNA
-  // vez al final. Hacer regex por cada nodo de texto es lo que disparaba el CPU
-  // en páginas grandes (límite de 10ms en el plan gratis de Workers).
-  const addText = (raw: string) => {
-    if (charCount >= MAX_CHARS) return;
-    parts.push(raw);
-    charCount += raw.length;
   };
 
   // Factory de handler para encabezados (h1/h2/h3) con buffer por elemento.
@@ -68,21 +85,7 @@ export async function parseHtml(html: string): Promise<SiteSignals> {
   let ldBuf = '';
   let inLd = false;
 
-  let rw = new HTMLRewriter();
-
-  // Marca regiones no visibles para excluirlas del texto principal.
-  for (const tag of SKIP_TAGS) {
-    rw = rw.on(tag, {
-      element(el: RWElement) {
-        skipDepth++;
-        el.onEndTag(() => {
-          skipDepth = Math.max(0, skipDepth - 1);
-        });
-      },
-    });
-  }
-
-  rw = rw
+  const rw = new HTMLRewriter()
     .on('html', {
       element(el: RWElement) {
         const lang = el.getAttribute('lang');
@@ -143,20 +146,13 @@ export async function parseHtml(html: string): Promise<SiteSignals> {
       text(t: RWText) {
         if (inLd) ldBuf += t.text;
       },
-    })
-    // Recolector general de texto visible (todo nodo de texto no excluido).
-    .on('*', {
-      text(t: RWText) {
-        if (skipDepth > 0) return;
-        addText(t.text);
-      },
     });
 
   // Consumir la respuesta transformada dispara los handlers.
   await rw.transform(new Response(html)).arrayBuffer();
 
   signals.jsonLdTypes = [...new Set(signals.jsonLdTypes)];
-  const text = parts.join(' ').replace(/\s+/g, ' ').trim().slice(0, MAX_CHARS);
+  const text = extractVisibleText(html);
   signals.mainText = text;
   signals.wordCount = text ? (text.match(/\S+/g)?.length ?? 0) : 0;
   return signals;
