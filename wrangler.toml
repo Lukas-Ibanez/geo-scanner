@@ -19,6 +19,15 @@ binding = "DB"
 database_name = "geo_leads"
 database_id = "1303ab9e-4ab7-47dc-a5df-05a609d3e9db"
 
+# --- Workers AI: análisis de contenido (alternativa a Gemini) ---
+[ai]
+binding = "AI"
+
+# --- Variables (no secretas) ---
+# Proveedor de IA para el análisis de contenido: 'gemini' | 'workers-ai'.
+[vars]
+AI_PROVIDER = "workers-ai"
+
 # Secrets (no van aquí):
 #   Local:  .dev.vars
 #   Prod:   wrangler pages secret put GEMINI_API_KEY

@@ -24,3 +24,8 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # CACHE_TTL_HOURS=6
 # Link de la sección de servicios del portafolio (CTA final)
 # PORTFOLIO_CTA_URL=https://lukasibanez.dev/#servicios
+# Proveedor de IA para el análisis de contenido: 'gemini' | 'workers-ai'
+# (en prod se define en wrangler.toml [vars]; aquí solo para overrides locales)
+# AI_PROVIDER=workers-ai
+# Override del modelo de Workers AI
+# WORKERSAI_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast

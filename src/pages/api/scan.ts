@@ -4,7 +4,7 @@ import { validateAndNormalize } from '../../lib/validate';
 import { fetchSite } from '../../lib/fetchSite';
 import { parseHtml } from '../../lib/parseHtml';
 import { computeTechnical } from '../../lib/technicalScore';
-import { evaluateContent } from '../../lib/gemini';
+import { evaluateContent } from '../../lib/content';
 import { combineScores } from '../../lib/score';
 import { isEntitled, projectForClient } from '../../lib/entitlement';
 import { getCachedScan, putCachedScan } from '../../lib/cache';
@@ -82,6 +82,10 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     const signals = await parseHtml(site.html);
     const tech = computeTechnical(signals, site);
     const content = await evaluateContent(signals, env);
+    if (!content.available) {
+      // Visible con `wrangler pages deployment tail` para diagnosticar el proveedor de IA.
+      console.error('content eval degraded', { provider: env.AI_PROVIDER || 'gemini', reason: content.debug });
+    }
     const { finalScore, subScores, verdict } = combineScores(tech, content);
     const passed = tech.checks.filter((c) => c.passed).length;
 
