@@ -26,7 +26,7 @@ interface Env {
   RATE_LIMIT_WHITELIST?: string;
   CACHE_TTL_HOURS?: string;
   PORTFOLIO_CTA_URL?: string;
-  AI_PROVIDER?: string; // 'gemini' (default) | 'workers-ai'
+  AI_PROVIDER?: string; // 'hybrid' (default) | 'gemini' | 'workers-ai'
   WORKERSAI_MODEL?: string; // override del modelo de Workers AI
   RESEND_FROM?: string; // remitente verificado en Resend, p.ej. "GEO Scanner <informe@geo.lukasibanez.dev>"
   RESEND_REPLY_TO?: string; // correo de respuesta opcional

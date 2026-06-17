@@ -24,9 +24,9 @@ database_id = "1303ab9e-4ab7-47dc-a5df-05a609d3e9db"
 binding = "AI"
 
 # --- Variables (no secretas) ---
-# Proveedor de IA para el análisis de contenido: 'gemini' | 'workers-ai'.
+# Proveedor de IA: 'hybrid' (Gemini + respaldo Workers AI) | 'gemini' | 'workers-ai'.
 [vars]
-AI_PROVIDER = "workers-ai"
+AI_PROVIDER = "hybrid"
 
 # Secrets (no van aquí):
 #   Local:  .dev.vars

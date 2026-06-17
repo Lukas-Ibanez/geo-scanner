@@ -84,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     const content = await evaluateContent(signals, env);
     if (!content.available) {
       // Visible con `wrangler pages deployment tail` para diagnosticar el proveedor de IA.
-      console.error('content eval degraded', { provider: env.AI_PROVIDER || 'gemini', reason: content.debug });
+      console.error('content eval degraded', { provider: env.AI_PROVIDER || 'hybrid', reason: content.debug });
     }
     const { finalScore, subScores, verdict } = combineScores(tech, content);
     const passed = tech.checks.filter((c) => c.passed).length;
