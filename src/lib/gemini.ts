@@ -4,8 +4,8 @@ import type { SiteSignals, ContentResult } from './types';
 import { SYSTEM_INSTRUCTION, buildUserPrompt, degraded, finalizeResult } from './contentShared';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
-const TIMEOUT_MS = 12000;
-const MAX_ATTEMPTS = 2; // menos reintentos: en modo híbrido el respaldo (Workers AI) entra antes
+const TIMEOUT_MS = 15000;
+const MAX_ATTEMPTS = 3; // Gemini es el único proveedor: priorizamos confiabilidad sobre velocidad
 
 // responseSchema de Gemini (subconjunto de OpenAPI) → fuerza JSON válido.
 const RESPONSE_SCHEMA = {
