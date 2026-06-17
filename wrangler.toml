@@ -27,6 +27,10 @@ binding = "AI"
 # Proveedor de IA: 'gemini' (activo, más confiable) | 'hybrid' | 'workers-ai'.
 [vars]
 AI_PROVIDER = "gemini"
+# Modelo de Gemini: 3.1-flash-lite da 500 req/día gratis (vs 20 de 2.5-flash).
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+# Tope interno de llamadas/día (bajo el límite real de 500 del free tier).
+GEMINI_DAILY_LIMIT = "450"
 
 # Secrets (no van aquí):
 #   Local:  .dev.vars

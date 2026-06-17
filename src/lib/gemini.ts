@@ -3,7 +3,8 @@
 import type { SiteSignals, ContentResult } from './types';
 import { SYSTEM_INSTRUCTION, buildUserPrompt, degraded, finalizeResult } from './contentShared';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+// gemini-3.1-flash-lite: 500 req/día en free tier (25× más que 2.5-flash, que solo da 20).
+const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 const TIMEOUT_MS = 15000;
 const MAX_ATTEMPTS = 3; // Gemini es el único proveedor: priorizamos confiabilidad sobre velocidad
 
@@ -58,9 +59,10 @@ export async function evaluateWithGemini(signals: SiteSignals, env: Env): Promis
       responseSchema: RESPONSE_SCHEMA,
       temperature: 0.4,
       maxOutputTokens: 2048,
-      // gemini-2.5-flash "piensa" por defecto y puede gastarse el presupuesto de
-      // tokens pensando sin devolver texto. Lo desactivamos para garantizar salida.
-      thinkingConfig: { thinkingBudget: 0 },
+      // Solo los modelos 2.x usan `thinkingBudget` (sin esto, 2.5-flash gastaba el
+      // presupuesto "pensando" y no devolvía texto). Los 3.x usan `thinkingLevel`
+      // y Flash-Lite ya viene en "minimal", así que no necesita configuración.
+      ...(model.startsWith('gemini-2') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     },
   };
 
