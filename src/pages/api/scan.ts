@@ -106,8 +106,13 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       technicalChecks: tech.checks,
     };
 
-    // 6) Guardar en caché
-    await putCachedScan(env.SCAN_CACHE, domain, full, ttlHours);
+    // 6) Guardar en caché SOLO si el análisis con IA se pudo hacer. Si la IA
+    //    degradó (cuota/timeout), no cacheamos: lo valioso es el análisis con IA
+    //    y no queremos congelar un resultado sin IA durante horas; así el próximo
+    //    intento reintenta la IA en vez de servir el degradado desde caché.
+    if (full.aiAnalysisAvailable) {
+      await putCachedScan(env.SCAN_CACHE, domain, full, ttlHours);
+    }
   } else {
     full = { ...full, fromCache: true };
   }
