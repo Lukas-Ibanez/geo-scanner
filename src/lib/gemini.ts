@@ -57,7 +57,12 @@ export async function evaluateWithGemini(signals: SiteSignals, env: Env): Promis
     generationConfig: {
       responseMimeType: 'application/json',
       responseSchema: RESPONSE_SCHEMA,
-      temperature: 0.4,
+      // Determinismo máximo: el puntaje se muestra a clientes y debe reproducirse
+      // entre escaneos del mismo sitio. temperature 0 + sampling fijo + seed.
+      temperature: 0,
+      topP: 1,
+      topK: 1,
+      seed: 42,
       maxOutputTokens: 2048,
       // Solo los modelos 2.x usan `thinkingBudget` (sin esto, 2.5-flash gastaba el
       // presupuesto "pensando" y no devolvía texto). Los 3.x usan `thinkingLevel`
