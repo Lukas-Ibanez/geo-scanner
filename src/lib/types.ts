@@ -67,6 +67,12 @@ export interface SubScores {
 /** Nivel de acceso al resultado: gratis (teaser), con email (full), de pago (detailed). */
 export type AccessLevel = 'teaser' | 'full' | 'detailed';
 
+/** Puntaje (final + subpuntajes) de un sitio. null si no se pudo evaluar. */
+export interface ScoreSnapshot {
+  finalScore: number | null;
+  subScores: SubScores | null;
+}
+
 /** Un competidor evaluado con el mismo método que el cliente. */
 export interface CompetitorComparison {
   url: string;
@@ -90,6 +96,7 @@ export interface ClientQuestion {
 export interface DetailedReport {
   competitors: CompetitorComparison[] | null;
   competitorsSummary: string | null;
+  clientComparison: ScoreSnapshot | null; // puntaje del cliente con el MISMO evaluador que los competidores
   clientQuestions: ClientQuestion[] | null;
   generatedAt: string; // ISO
 }

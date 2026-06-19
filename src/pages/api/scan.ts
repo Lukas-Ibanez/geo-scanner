@@ -150,8 +150,6 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
           ? await buildDetailedReport({
               signals,
               site,
-              clientScore: full.finalScore,
-              clientSubScores: full.subScores,
               competitors,
               env,
             })

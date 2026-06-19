@@ -9,6 +9,7 @@ import type {
   SiteSignals,
   FetchedSite,
   SubScores,
+  ScoreSnapshot,
   DetailedReport,
   CompetitorComparison,
   ClientQuestion,
@@ -29,8 +30,6 @@ const MAX_COMPETITORS = 3;
 export interface BuildDetailedReportArgs {
   signals: SiteSignals;
   site: FetchedSite;
-  clientScore: number;
-  clientSubScores: SubScores;
   competitors: string[];
   env: Env;
 }
@@ -44,7 +43,7 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
   const [competitorSection, clientQuestions] = await Promise.all([
     buildCompetitorSection(args, model).catch((err) => {
       console.error('detailed: competidores falló', err);
-      return { competitors: null, competitorsSummary: null };
+      return { competitors: null, competitorsSummary: null, clientComparison: null };
     }),
     buildClientQuestions(args, model).catch((err) => {
       console.error('detailed: preguntas-cliente falló', err);
@@ -55,6 +54,7 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
   return {
     competitors: competitorSection.competitors,
     competitorsSummary: competitorSection.competitorsSummary,
+    clientComparison: competitorSection.clientComparison,
     clientQuestions,
     generatedAt,
   };
@@ -79,7 +79,11 @@ interface CompetitorTarget {
 async function buildCompetitorSection(
   args: BuildDetailedReportArgs,
   model: string
-): Promise<{ competitors: CompetitorComparison[] | null; competitorsSummary: string | null }> {
+): Promise<{
+  competitors: CompetitorComparison[] | null;
+  competitorsSummary: string | null;
+  clientComparison: ScoreSnapshot | null;
+}> {
   const ownDomain = hostnameOf(args.site.finalUrl);
 
   // Valida/normaliza cada URL; descarta inválidas, las del mismo dominio del cliente
@@ -97,10 +101,15 @@ async function buildCompetitorSection(
     targets.push({ url: v.data.url, origin: v.data.origin, domain: v.data.domain });
   }
 
-  if (targets.length === 0) return { competitors: null, competitorsSummary: null };
+  if (targets.length === 0) return { competitors: null, competitorsSummary: null, clientComparison: null };
 
-  // En paralelo: los que fallen entran con error y score null, no rompen.
-  const settled = await Promise.allSettled(targets.map((t) => scoreCompetitor(t, args.env)));
+  // En paralelo (sin latencia secuencial): los competidores + el puntaje del cliente
+  // medido con el MISMO evaluador (Claude/Haiku) para que la tabla sea manzana-con-manzana.
+  // Los que fallen entran con error/null y no rompen; si el cliente falla, queda null.
+  const [settled, clientComparison] = await Promise.all([
+    Promise.allSettled(targets.map((t) => scoreCompetitor(t, args.env))),
+    scoreClientHomogeneous(args.signals, args.site, args.env).catch(() => null),
+  ]);
   const competitors: CompetitorComparison[] = settled.map((res, i) =>
     res.status === 'fulfilled'
       ? res.value
@@ -108,8 +117,8 @@ async function buildCompetitorSection(
   );
 
   // Síntesis: una sola llamada con SOLO los números/subscores y títulos (no el texto completo).
-  const competitorsSummary = await synthesizeComparison(args, competitors, model);
-  return { competitors, competitorsSummary };
+  const competitorsSummary = await synthesizeComparison(args, clientComparison, competitors, model);
+  return { competitors, competitorsSummary, clientComparison };
 }
 
 async function scoreCompetitor(target: CompetitorTarget, env: Env): Promise<CompetitorComparison> {
@@ -118,11 +127,24 @@ async function scoreCompetitor(target: CompetitorTarget, env: Env): Promise<Comp
     return { url: target.url, domain: target.domain, finalScore: null, subScores: null, error: 'no-alcanzable' };
   }
   const signals = await parseHtml(site.html);
+  // Mismo método EXACTO que el cliente (scoreClientHomogeneous), pero con fetch/parse propios.
+  const { finalScore, subScores } = await scoreClientHomogeneous(signals, site, env);
+  return { url: target.url, domain: target.domain, finalScore, subScores };
+}
+
+// Puntúa al cliente con el MISMO método que a los competidores (computeTechnical +
+// evaluateWithClaude + combineScores), pero SIN re-descargar el sitio: ya tenemos
+// signals y site del escaneo base. Si la IA degrada, combineScores cae a técnico-solo,
+// igual que para los competidores → la tabla queda en la misma escala.
+async function scoreClientHomogeneous(
+  signals: SiteSignals,
+  site: FetchedSite,
+  env: Env
+): Promise<ScoreSnapshot> {
   const tech = computeTechnical(signals, site);
   const content = await evaluateWithClaude(signals, env);
-  // Mismo método que el cliente: combineScores (si la IA degradó, queda técnico-solo).
   const { finalScore, subScores } = combineScores(tech, content);
-  return { url: target.url, domain: target.domain, finalScore, subScores };
+  return { finalScore, subScores };
 }
 
 const COMPARISON_SYSTEM = `Eres un consultor de negocio experto en GEO (visibilidad en motores de búsqueda generativos como ChatGPT, Perplexity y Google AI). Te doy el puntaje (0-100) y los subpuntajes del sitio de un cliente y de sus competidores. En 2 o 3 frases, en español y en lenguaje de DUEÑO DE NEGOCIO, explica dónde el cliente queda por detrás de sus competidores y qué debería priorizar para mejorar su visibilidad ante las IA.
@@ -146,12 +168,18 @@ function describeSub(s: SubScores): string {
 
 async function synthesizeComparison(
   args: BuildDetailedReportArgs,
+  client: ScoreSnapshot | null,
   competitors: CompetitorComparison[],
   model: string
 ): Promise<string | null> {
   const clientTitle = args.signals.title || hostnameOf(args.site.finalUrl) || 'el sitio del cliente';
+  // Puntaje del cliente medido con el MISMO evaluador que los competidores (no el titular de Gemini).
+  const clientLine =
+    client && client.finalScore != null && client.subScores
+      ? `Cliente "${clientTitle}" — puntaje ${client.finalScore}/100; subpuntajes: ${describeSub(client.subScores)}.`
+      : `Cliente "${clientTitle}" — no se pudo evaluar con el mismo método.`;
   const lines: string[] = [
-    `Cliente "${clientTitle}" — puntaje ${args.clientScore}/100; subpuntajes: ${describeSub(args.clientSubScores)}.`,
+    clientLine,
     'Competidores:',
     ...competitors.map((c) =>
       c.finalScore == null || !c.subScores
