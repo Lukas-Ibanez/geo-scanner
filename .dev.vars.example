@@ -2,6 +2,19 @@
 # Obtén una clave gratis en https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=tu_clave_de_google_ai_studio
 
+# --- Claude (API de Anthropic) ---
+# Necesario si usas AI_PROVIDER=claude o el informe detallado. Es de pago: crea
+# una clave en https://platform.claude.com (Console → API keys).
+# ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxx
+
+# --- Informe detallado (nivel 'detailed', de pago) ---
+# Passphrase que desbloquea el informe detallado (comparación con competidores +
+# preguntas-cliente). Es TEMPORAL: reemplázala por una verificación de pago real
+# cuando se cobre. Si se omite, nadie accede al nivel 'detailed'.
+# DETAILED_PASSPHRASE=cambia-esto-por-una-frase-secreta
+# Modelo del informe detallado (default: claude-haiku-4-5).
+# DETAILED_MODEL=claude-haiku-4-5
+
 # --- Envío del informe por correo (Resend) ---
 # Clave gratis en https://resend.com (3.000 emails/mes). Si se omite, no se envía
 # correo (el informe igual se muestra en pantalla y el lead se guarda).
@@ -24,8 +37,12 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # CACHE_TTL_HOURS=6
 # Link de la sección de servicios del portafolio (CTA final)
 # PORTFOLIO_CTA_URL=https://lukasibanez.dev/#servicios
-# Proveedor de IA: 'hybrid' (Gemini + respaldo Workers AI) | 'gemini' | 'workers-ai'
+# Proveedor de IA: 'hybrid' (Gemini + respaldo Workers AI) | 'gemini' | 'claude' | 'workers-ai'
 # (en prod se define en wrangler.toml [vars]; aquí solo para overrides locales)
 # AI_PROVIDER=hybrid
 # Override del modelo de Workers AI
 # WORKERSAI_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast
+# Override del modelo de Claude (default: claude-haiku-4-5)
+# ANTHROPIC_MODEL=claude-haiku-4-5
+# Tope global de llamadas a Claude por día (Claude es de pago; 0 = sin tope)
+# ANTHROPIC_DAILY_LIMIT=200

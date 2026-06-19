@@ -64,6 +64,36 @@ export interface SubScores {
   claridadGeografica: number;
 }
 
+/** Nivel de acceso al resultado: gratis (teaser), con email (full), de pago (detailed). */
+export type AccessLevel = 'teaser' | 'full' | 'detailed';
+
+/** Un competidor evaluado con el mismo método que el cliente. */
+export interface CompetitorComparison {
+  url: string;
+  domain: string;
+  finalScore: number | null; // null si no se pudo evaluar (ver `error`)
+  subScores: SubScores | null;
+  error?: string;
+}
+
+/** Una pregunta-cliente y si el sitio tiene contenido para que una IA la responda citándolo. */
+export interface ClientQuestion {
+  pregunta: string;
+  cubierta: boolean;
+  nota: string;
+}
+
+/**
+ * Informe detallado (nivel 'detailed'): análisis que el escaneo gratis no hace.
+ * Cada sección degrada por separado (null) sin romper el resto del informe.
+ */
+export interface DetailedReport {
+  competitors: CompetitorComparison[] | null;
+  competitorsSummary: string | null;
+  clientQuestions: ClientQuestion[] | null;
+  generatedAt: string; // ISO
+}
+
 /**
  * Resultado completo de un escaneo. Es lo que se cachea en KV.
  * Lo que se envía al cliente es una proyección (ver entitlement.projectForClient):
@@ -74,6 +104,7 @@ export interface ScanResult {
   domain: string;
   scannedAt: string; // ISO
   fromCache: boolean;
+  accessLevel: AccessLevel; // nivel con el que se proyectó al cliente
 
   // --- teaser (siempre visible) ---
   finalScore: number; // 0-100
@@ -88,4 +119,7 @@ export interface ScanResult {
   locked: boolean;
   recommendations: string[] | null;
   technicalChecks: TechnicalCheck[] | null;
+
+  // --- detailed (gated, de pago) ---
+  detailedReport: DetailedReport | null;
 }

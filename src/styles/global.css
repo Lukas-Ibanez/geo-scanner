@@ -427,6 +427,112 @@ a:hover {
   font-size: 0.98rem;
 }
 
+/* industrias / casos de uso */
+.industries {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1fr;
+  margin-top: 34px;
+}
+.industry {
+  padding: 26px 24px;
+  text-align: left;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.industry:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+.industry h3 {
+  font-size: 1.15rem;
+  margin-bottom: 4px;
+}
+.industry .who {
+  margin: 0 0 10px;
+  color: var(--blue-600);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.industry .how {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+/* metodología */
+.method {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 1fr;
+  margin-top: 34px;
+}
+.method-card {
+  padding: 28px 24px;
+  text-align: left;
+}
+.method-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.method-head h3 {
+  font-size: 1.2rem;
+}
+.method-weight {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--blue-600);
+}
+.method-intro {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.96rem;
+}
+.method-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 11px;
+}
+.method-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.method-wt {
+  flex: 0 0 auto;
+  min-width: 52px;
+  height: 26px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--blue-600);
+  background: rgba(59, 99, 236, 0.1);
+}
+.method-row .lbl {
+  color: var(--ink);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+.method-row.dim .lbl strong {
+  color: var(--ink);
+}
+.method-note-inline {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* ---------- Loading ---------- */
 .loading {
   max-width: 600px;
@@ -910,6 +1016,12 @@ a:hover {
 @media (min-width: 720px) {
   .steps {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .industries {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .method {
+    grid-template-columns: repeat(2, 1fr);
   }
   .result-head {
     grid-template-columns: 200px 1fr;

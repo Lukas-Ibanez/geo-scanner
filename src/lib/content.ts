@@ -3,14 +3,17 @@
 //   AI_PROVIDER=hybrid      → Gemini principal; si falla/degrada, respaldo Workers AI (default)
 //   AI_PROVIDER=gemini      → solo Google Gemini Flash
 //   AI_PROVIDER=workers-ai  → solo Cloudflare Workers AI (Llama 3.3 70B)
+//   AI_PROVIDER=claude      → solo Claude (API de Anthropic, structured output vía tool use)
 import type { SiteSignals, ContentResult } from './types';
 import { evaluateWithGemini } from './gemini';
 import { evaluateWithWorkersAI } from './workersai';
+import { evaluateWithClaude } from './claude';
 
 export async function evaluateContent(signals: SiteSignals, env: Env): Promise<ContentResult> {
   const provider = (env.AI_PROVIDER || 'hybrid').trim().toLowerCase();
 
   if (provider === 'gemini') return evaluateWithGemini(signals, env);
+  if (provider === 'claude' || provider === 'anthropic') return evaluateWithClaude(signals, env);
   if (provider === 'workers-ai' || provider === 'workersai' || provider === 'cf') {
     return evaluateWithWorkersAI(signals, env);
   }

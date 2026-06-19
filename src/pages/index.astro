@@ -41,6 +41,52 @@ const faqs = [
   },
 ];
 
+// Casos de uso / industrias. Datos editables: cambia o agrega entradas aquí.
+const industries = [
+  {
+    title: 'Servicios locales',
+    who: 'Clínicas, talleres, estudios, salones y oficios.',
+    how: 'Cuando alguien le pide a una IA un servicio "cerca de mí", gana el negocio cuya web deja clarísimo qué hace y en qué zona atiende. El GEO se asegura de que ese seas tú.',
+  },
+  {
+    title: 'Tiendas y e-commerce',
+    who: 'Comercios con venta online o con local físico.',
+    how: 'Las IA recomiendan productos y tiendas dentro de su respuesta. Si tu catálogo y tu propuesta están bien explicados, te citan en vez de mandar al cliente a la competencia.',
+  },
+  {
+    title: 'Profesionales y consultores',
+    who: 'Abogados, contadores, agencias, coaches y freelancers.',
+    how: 'Tu experiencia es tu activo. El GEO la traduce en señales que la IA reconoce y cita cuando alguien busca a un experto en tu tema.',
+  },
+  {
+    title: 'Turismo y hospitalidad',
+    who: 'Hoteles, restaurantes, tours y arriendos.',
+    how: 'Los viajeros planifican preguntándole a la IA. Un sitio claro sobre qué ofreces y dónde estás hace que te incluya en sus recomendaciones de viaje.',
+  },
+];
+
+// Metodología: refleja el puntaje real (técnico 40% + contenido 60%).
+// Los pesos del bloque técnico salen de src/lib/technicalScore.ts.
+const techChecks = [
+  { w: 25, label: 'Las IA pueden leer tu sitio (no bloqueas a sus robots)' },
+  { w: 15, label: 'Datos estructurados que describen tu negocio' },
+  { w: 12, label: 'Título de página claro y de buen largo' },
+  { w: 12, label: 'Descripción que resume de qué trata el sitio' },
+  { w: 12, label: 'Un encabezado principal único' },
+  { w: 8, label: 'Listo para verse y citarse bien al compartirlo' },
+  { w: 6, label: 'Señala cuál es la versión oficial de cada página' },
+  { w: 5, label: 'Mapa del sitio (sitemap) para descubrir sus páginas' },
+  { w: 5, label: 'Archivo llms.txt que orienta a las IA' },
+];
+
+// Las 4 dimensiones de contenido (ver src/lib/contentShared.ts), promediadas.
+const dimensions = [
+  { name: 'Claridad de negocio', desc: 'Si queda explícito qué vendes y para quién desde el primer bloque de texto.' },
+  { name: 'Citabilidad', desc: 'Si tu contenido está estructurado en respuestas claras que una IA pueda extraer y citar.' },
+  { name: 'Autoridad', desc: 'Si hay señales verificables de experiencia: años, clientes, cifras, casos o reseñas.' },
+  { name: 'Claridad geográfica', desc: 'Si se entiende en qué ciudad o zona operas (o si claramente eres un negocio 100% digital).' },
+];
+
 const jsonLd = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -231,6 +277,82 @@ const jsonLd = {
             <span class="num">3</span>
             <h3>Recibe tu plan</h3>
             <p>Un puntaje claro y recomendaciones concretas, en lenguaje de negocio.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-center">
+          <h2>Para quién es</h2>
+          <p class="sub">El GEO ayuda a cualquier negocio que quiera que las IA lo entiendan y lo recomienden. Algunos ejemplos:</p>
+        </div>
+        <div class="industries">
+          {
+            industries.map((it) => (
+              <article class="industry card">
+                <h3>{it.title}</h3>
+                <p class="who">{it.who}</p>
+                <p class="how">{it.how}</p>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-center">
+          <h2>Cómo calculamos tu puntaje</h2>
+          <p class="sub">
+            Sin caja negra. Tu puntaje de 0 a 100 combina dos partes: un análisis técnico
+            (40%) y un análisis del contenido hecho por IA (60%).
+          </p>
+        </div>
+        <div class="method">
+          <article class="method-card card">
+            <div class="method-head">
+              <h3>Análisis técnico</h3>
+              <span class="method-weight">40%</span>
+            </div>
+            <p class="method-intro">Revisamos señales objetivas de tu sitio, cada una con su peso:</p>
+            <ul class="method-list">
+              {
+                techChecks.map((c) => (
+                  <li class="method-row">
+                    <span class="method-wt">{c.w} pts</span>
+                    <span class="lbl">{c.label}</span>
+                  </li>
+                ))
+              }
+            </ul>
+            <p class="method-note-inline">
+              Si tu sitio les impide la entrada a los robots de IA, el resto pasa a segundo
+              plano y el puntaje queda topado: sin acceso, no hay forma de que te recomienden.
+            </p>
+          </article>
+
+          <article class="method-card card">
+            <div class="method-head">
+              <h3>Análisis de contenido (IA)</h3>
+              <span class="method-weight">60%</span>
+            </div>
+            <p class="method-intro">Una IA evalúa tu contenido en cuatro dimensiones y promedia el resultado:</p>
+            <ul class="method-list">
+              {
+                dimensions.map((d) => (
+                  <li class="method-row dim">
+                    <span class="lbl"><strong>{d.name}.</strong> {d.desc}</span>
+                  </li>
+                ))
+              }
+            </ul>
+            <p class="method-note-inline">
+              Cada dimensión se mide contra criterios explícitos, no contra una opinión libre:
+              el mismo contenido obtiene siempre el mismo número.
+            </p>
           </article>
         </div>
       </div>

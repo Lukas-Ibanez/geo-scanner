@@ -24,17 +24,27 @@ database_id = "1303ab9e-4ab7-47dc-a5df-05a609d3e9db"
 binding = "AI"
 
 # --- Variables (no secretas) ---
-# Proveedor de IA: 'gemini' (activo, más confiable) | 'hybrid' | 'workers-ai'.
+# Proveedor de IA: 'gemini' (activo, más confiable) | 'hybrid' | 'claude' | 'workers-ai'.
 [vars]
-AI_PROVIDER = "gemini"
+AI_PROVIDER = "claude"
 # Modelo de Gemini: 3.1-flash-lite da 500 req/día gratis (vs 20 de 2.5-flash).
 GEMINI_MODEL = "gemini-3.1-flash-lite"
 # Tope interno de llamadas/día (bajo el límite real de 500 del free tier).
 GEMINI_DAILY_LIMIT = "450"
+# --- Claude (si AI_PROVIDER=claude o el informe detallado; es de pago) ---
+# Modelo de Claude para el análisis de contenido: por defecto 'claude-haiku-4-5'.
+# ANTHROPIC_MODEL = "claude-haiku-4-5"
+# Tope interno de llamadas/día a Claude, global a contenido + informe detallado (0 = sin tope).
+# ANTHROPIC_DAILY_LIMIT = "200"
+# Modelo del informe detallado (nivel 'detailed'): por defecto 'claude-haiku-4-5'.
+# DETAILED_MODEL = "claude-haiku-4-5"
+# DETAILED_PASSPHRASE NO va aquí: es un secret (ver abajo).
 
 # Secrets (no van aquí):
 #   Local:  .dev.vars
 #   Prod:   wrangler pages secret put GEMINI_API_KEY
+#           wrangler pages secret put ANTHROPIC_API_KEY     (si AI_PROVIDER=claude o informe detallado)
+#           wrangler pages secret put DETAILED_PASSPHRASE   (desbloquea el informe 'detailed')
 #           wrangler pages secret put RESEND_API_KEY
 #
 # RESEND_FROM / RESEND_REPLY_TO pueden ir como variables de entorno del proyecto
