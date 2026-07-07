@@ -371,13 +371,15 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   p.appendChild(count);
   p.appendChild(
     document.createTextNode(
-      ' mejoras concretas para tu sitio. Déjame tu correo: aquí verás el resumen al instante y te envío el informe detallado (diagnóstico técnico punto por punto y plan priorizado) a tu correo.'
+      ' mejoras concretas para tu sitio. Déjame tu correo y te envío el informe completo a tu correo.'
     )
   );
   box.appendChild(h);
   box.appendChild(p);
 
   const form = el('form', 'unlock-form') as HTMLFormElement;
+
+  // --- Email (siempre visible) ---
   const input = document.createElement('input');
   input.type = 'email';
   input.required = true;
@@ -386,26 +388,7 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   input.placeholder = 'tucorreo@ejemplo.com';
   form.appendChild(input);
 
-  // Competidores (opcional, 1-3 URLs una por línea). Si los deja vacíos, se
-  // omite del body (no se rompe nada).
-  const compWrap = el('div', 'comp-row');
-  const compLabel = document.createElement('label');
-  compLabel.htmlFor = 'comp-input';
-  compLabel.className = 'comp-label';
-  compLabel.innerHTML = '¿Comparar contra competidores? <span class="comp-hint">(opcional, hasta 3 URLs, una por línea)</span>';
-  compWrap.appendChild(compLabel);
-  const compTextarea = document.createElement('textarea');
-  compTextarea.id = 'comp-input';
-  compTextarea.name = 'competitors';
-  compTextarea.rows = 2;
-  compTextarea.spellcheck = false;
-  compTextarea.autocomplete = 'off';
-  compTextarea.placeholder = 'https://competidor1.com\nhttps://competidor2.com';
-  compWrap.appendChild(compTextarea);
-  form.appendChild(compWrap);
-
-  // Toggle para pruebas: si tiene código de acceso, lo ingresa acá y se desbloquea
-  // también el informe detallado (sin tocar el flujo normal de "solo email").
+  // --- Toggle para el informe detallado (passphrase + competidores) ---
   const ppRow = el('div', 'pp-row');
   const ppToggle = document.createElement('input');
   ppToggle.type = 'checkbox';
@@ -413,10 +396,16 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   const ppLabel = document.createElement('label');
   ppLabel.htmlFor = 'pp-toggle';
   ppLabel.className = 'pp-toggle-label';
-  ppLabel.textContent = 'Tengo código de acceso';
+  ppLabel.textContent = 'Tengo código de acceso (informe detallado)';
   ppRow.appendChild(ppToggle);
   ppRow.appendChild(ppLabel);
+  form.appendChild(ppRow);
 
+  // --- Caja del detallado (oculta hasta activar el toggle) ---
+  const detailedBox = el('div', 'detailed-box');
+  detailedBox.hidden = true;
+
+  // Passphrase
   const ppInput = document.createElement('input');
   ppInput.type = 'text';
   ppInput.name = 'passphrase';
@@ -424,16 +413,95 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   ppInput.autocomplete = 'off';
   ppInput.spellcheck = false;
   ppInput.placeholder = 'Código de acceso';
-  ppInput.hidden = true;
-  ppRow.appendChild(ppInput);
+  detailedBox.appendChild(ppInput);
 
+  // --- Comparativa con competidores ---
+  const compSection = el('div', 'comp-section');
+  const compTitle = document.createElement('p');
+  compTitle.className = 'comp-title';
+  compTitle.textContent = 'Comparar contra competidores';
+  compSection.appendChild(compTitle);
+
+  // Botón "Detectar con IA"
+  const detectRow = el('div', 'detect-row');
+  const detectBtn = document.createElement('button');
+  detectBtn.type = 'button';
+  detectBtn.className = 'btn btn-secondary btn-sm';
+  detectBtn.textContent = 'Detectar competidores con IA';
+  detectRow.appendChild(detectBtn);
+  const detectHint = el('span', 'detect-hint');
+  detectHint.textContent = ' Lee tu sitio y propone 3–5.';
+  detectRow.appendChild(detectHint);
+  compSection.appendChild(detectRow);
+
+  // Lista de sugerencias (chips con checkbox)
+  const suggestionsList = el('div', 'comp-suggestions');
+  suggestionsList.hidden = true;
+  compSection.appendChild(suggestionsList);
+
+  // Textarea para URLs manuales
+  const compLabel = document.createElement('label');
+  compLabel.htmlFor = 'comp-input';
+  compLabel.className = 'comp-label';
+  compLabel.textContent = 'O agrega URLs manualmente (opcional, hasta 3, una por línea)';
+  compSection.appendChild(compLabel);
+  const compTextarea = document.createElement('textarea');
+  compTextarea.id = 'comp-input';
+  compTextarea.name = 'competitors';
+  compTextarea.rows = 2;
+  compTextarea.spellcheck = false;
+  compTextarea.autocomplete = 'off';
+  compTextarea.placeholder = 'https://competidor1.com\nhttps://competidor2.com';
+  compSection.appendChild(compTextarea);
+
+  detailedBox.appendChild(compSection);
+  form.appendChild(detailedBox);
+
+  // Toggle handler — abre/cierra la caja del detallado y resetea la passphrase
   ppToggle.addEventListener('change', () => {
-    ppInput.hidden = !ppToggle.checked;
-    if (!ppToggle.checked) ppInput.value = '';
+    detailedBox.hidden = !ppToggle.checked;
+    if (!ppToggle.checked) {
+      ppInput.value = '';
+      // No limpiamos sugerencias para que el usuario no pierda trabajo si re-toggla.
+    }
   });
 
-  form.appendChild(ppRow);
+  // Detectar competidores con IA
+  detectBtn.addEventListener('click', async () => {
+    if (!lastUrl) {
+      renderDetectError(suggestionsList, 'Vuelve a escanear tu sitio antes de detectar competidores.');
+      return;
+    }
+    detectBtn.disabled = true;
+    const originalLabel = detectBtn.textContent;
+    detectBtn.textContent = 'Detectando…';
+    try {
+      const res = await fetch('/api/suggest-competitors', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: lastUrl }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { competitors?: Array<{ domain: string; reason: string }>; error?: string }
+        | null;
+      if (!res.ok || !data || !Array.isArray(data.competitors)) {
+        renderDetectError(
+          suggestionsList,
+          (data && 'error' in data && data.error) ||
+            'No pudimos sugerir competidores. Puedes pegarlos manualmente abajo.'
+        );
+        return;
+      }
+      renderSuggestions(suggestionsList, data.competitors);
+    } catch {
+      renderDetectError(suggestionsList, 'No pudimos conectar. Pega las URLs manualmente abajo.');
+    } finally {
+      detectBtn.disabled = false;
+      detectBtn.textContent = originalLabel;
+    }
+  });
 
+  // --- Submit ---
   const btn = document.createElement('button');
   btn.type = 'submit';
   btn.className = 'btn btn-primary';
@@ -459,14 +527,27 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     lastEmail = email;
-    // Pasamos la passphrase SOLO si el toggle está activo y tiene algo — así
-    // el flujo normal (sin código) sigue idéntico a como estaba antes.
+
+    // 1) Passphrase solo si el toggle está activo y tiene algo.
     const passRaw = (ppInput.value || '').trim();
-    const competitors = (compTextarea.value || '')
+
+    // 2) Competidores: union de chips marcados + URLs manuales (dedup por dominio,
+    //    máximo 3). El backend (validate.ts) ya rechaza privados/inválidos.
+    const picked = new Set<string>();
+    suggestionsList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((cb) => {
+      if (cb.checked) picked.add(cb.value.trim().toLowerCase());
+    });
+    const manual = (compTextarea.value || '')
       .split(/\r?\n/)
       .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 3);
+      .filter(Boolean);
+    for (const raw of manual) {
+      let d = raw.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+      if (d) picked.add(d);
+      if (picked.size >= 3) break;
+    }
+    const competitors = Array.from(picked).slice(0, 3);
+
     const body: {
       url: string;
       email: string;
@@ -479,6 +560,50 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   });
 
   return box;
+}
+
+// Pinta los chips de sugerencias (checkbox + dominio + razón corta).
+function renderSuggestions(
+  container: HTMLElement,
+  items: Array<{ domain: string; reason: string }>
+): void {
+  container.innerHTML = '';
+  if (!items.length) {
+    const p = el('p', 'comp-empty');
+    p.textContent = 'La IA no encontró competidores claros. Pega URLs abajo o sigue sin comparar.';
+    container.appendChild(p);
+    container.hidden = false;
+    return;
+  }
+  const intro = el('p', 'comp-suggestions-intro');
+  intro.textContent = 'Sugerencias de la IA — desmarca las que no quieras comparar:';
+  container.appendChild(intro);
+  for (const it of items) {
+    const chip = el('label', 'comp-chip');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = it.domain;
+    cb.checked = true;
+    chip.appendChild(cb);
+    const text = el('span', 'comp-chip-text');
+    text.textContent = it.domain;
+    chip.appendChild(text);
+    if (it.reason) {
+      const why = el('span', 'comp-chip-why');
+      why.textContent = it.reason;
+      chip.appendChild(why);
+    }
+    container.appendChild(chip);
+  }
+  container.hidden = false;
+}
+
+function renderDetectError(container: HTMLElement, msg: string): void {
+  container.innerHTML = '';
+  const p = el('p', 'comp-empty');
+  p.textContent = msg;
+  container.appendChild(p);
+  container.hidden = false;
 }
 
 function renderCta(): HTMLElement {
