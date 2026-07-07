@@ -1,0 +1,475 @@
+---
+// /report — renderiza el reporte GEO completo en HTML print-ready.
+// El usuario abre esta URL con los params ?url=...&email=...&passphrase=...
+// (la passphrase es temporal hasta que se enchufe Stripe), y luego usa el botón
+// "Imprimir / Guardar como PDF" o el atajo Ctrl/Cmd+P para bajar el PDF.
+//
+// Internamente delega en buildScan (mismo flujo que /api/scan), por lo que el
+// reporte SIEMPRE refleja el último análisis disponible (sin caché — el
+// informe detallado nunca se cachea, y queremos datos frescos en un reporte
+// de pago).
+import type { SubScores, TechnicalCheck } from '../lib/types';
+import { buildScan, ScanError } from '../lib/scanFlow';
+import '../styles/report.css';
+
+export const prerender = false;
+
+const params = Astro.url.searchParams;
+const url = params.get('url');
+const email = params.get('email');
+const passphrase = params.get('passphrase');
+const competitorsParam = params.get('competitors');
+const competitors = competitorsParam
+  ? competitorsParam.split(',').map((s) => s.trim()).filter(Boolean)
+  : [];
+
+if (!url) {
+  return new Response(
+    'Falta el parámetro "url". Abre el reporte desde el resultado del escaneo.',
+    { status: 400, headers: { 'content-type': 'text/plain; charset=utf-8' } }
+  );
+}
+
+const env = Astro.locals.runtime.env;
+
+// Reusamos buildScan (mismo flujo que el endpoint). Para el reporte NO
+// aplicamos rate-limit al cliente porque ya pasó por el unlock del UI.
+let flow;
+try {
+  flow = await buildScan(env, 'report', {
+    url,
+    email,
+    passphrase,
+    competitors,
+  });
+} catch (err) {
+  if (err instanceof ScanError) {
+    return new Response(err.userMessage, {
+      status: err.status,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+  throw err;
+}
+
+const { result: r, level } = flow;
+if (level !== 'detailed') {
+  return new Response(
+    'Necesitas el código de acceso para ver el reporte detallado. Pídelo al dueño del sitio.',
+    { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } }
+  );
+}
+
+// Helpers locales (no los necesitamos en el bundle del cliente, solo aquí).
+const dimLabels: Record<keyof SubScores, { label: string; about: string }> = {
+  tecnico: {
+    label: 'Preparación técnica',
+    about: 'Si la estructura, los metadatos y los permisos le permiten a una IA leerte sin tropiezos.',
+  },
+  claridadNegocio: {
+    label: 'Claridad del negocio',
+    about: 'Si una IA entiende sin esfuerzo qué producto o servicio ofreces y para quién.',
+  },
+  citabilidad: {
+    label: 'Facilidad para ser citado',
+    about: 'Qué tan fácil es para una IA tomar tu contenido y citarlo como respuesta.',
+  },
+  autoridad: {
+    label: 'Señales de autoridad',
+    about: 'Las señales de experiencia, confianza y reputación que hacen que una IA prefiera recomendarte.',
+  },
+  claridadGeografica: {
+    label: 'Claridad geográfica',
+    about: 'Si queda claro en qué ciudad o zona operas.',
+  },
+};
+
+function bandClass(score: number): string {
+  if (score >= 70) return 'good';
+  if (score >= 45) return 'mid';
+  return 'bad';
+}
+
+const ringClass = bandClass(r.finalScore);
+const ringLabel =
+  r.finalScore >= 70 ? 'Bien' : r.finalScore >= 45 ? 'Aceptable' : 'A mejorar';
+
+// Construimos el plan de acción priorizado por fases a partir de las
+// recomendaciones existentes. Sin AI adicional: las recomendaciones ya vienen
+// ordenadas por impacto (vienen de Gemini con temperature 0 + seed).
+const recs = r.recommendations || [];
+const phaseQuick = recs.slice(0, 2);
+const phaseMedium = recs.slice(2, 4);
+const phaseLong = recs.slice(4);
+
+const checkGroups: Array<{ title: string; ids: string[] }> = [
+  {
+    title: 'Acceso de las IA',
+    ids: ['ai-bots'],
+  },
+  {
+    title: 'Identidad y metadatos',
+    ids: ['title', 'meta-description', 'h1'],
+  },
+  {
+    title: 'Datos estructurados y compartibilidad',
+    ids: ['structured-data', 'open-graph', 'canonical'],
+  },
+  {
+    title: 'Descubrimiento',
+    ids: ['sitemap', 'llms-txt'],
+  },
+];
+
+function groupChecks(ids: string[]): TechnicalCheck[] {
+  const list = r.technicalChecks || [];
+  return ids.map((id) => list.find((c) => c.id === id)).filter(
+    (c): c is TechnicalCheck => !!c
+  );
+}
+
+const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
+});
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Reporte GEO — {r.domain}</title>
+    <meta name="robots" content="noindex,nofollow" />
+  </head>
+  <body>
+    <div class="report-actions">
+      <button class="btn-secondary" onclick="window.close()">← Cerrar</button>
+      <button class="btn-primary" onclick="window.print()">Imprimir / Guardar como PDF</button>
+    </div>
+
+    <main class="report">
+      <!-- ===== Cover ===== -->
+      <section class="page cover">
+        <span class="brand">GEO Scanner · Reporte pagado</span>
+        <h1>{r.domain}</h1>
+        <p class="subtitle">Reporte detallado de visibilidad en motores de búsqueda generativos (GEO).</p>
+        <div class={`score-ring ${ringClass}`}>
+          <div>
+            <div class="num">{r.finalScore}</div>
+            <div class="den">/ 100 · {ringLabel}</div>
+          </div>
+        </div>
+        <p class="verdict">{r.verdict}</p>
+        <div class="meta">
+          <span>Sitio: <strong>{r.url}</strong></span>
+          <span>Generado: <strong>{generatedAtFmt}</strong></span>
+        </div>
+      </section>
+
+      <!-- ===== Resumen ejecutivo ===== -->
+      <section class="page">
+        <h2 class="section-title"><span class="num">01 ·</span> Resumen ejecutivo</h2>
+        <p class="intro">
+          La lectura rápida del estado de tu sitio: lo que ya está bien, lo que falta y un veredicto directo.
+          Esta sección resume el análisis completo en menos de un minuto.
+        </p>
+
+        {r.detailedReport?.executiveSummary ? (
+          <>
+            <div class="summary-grid">
+              <div class="summary-block strengths">
+                <h3>✓ Lo que ya está bien</h3>
+                <ul>
+                  {r.detailedReport.executiveSummary.strengths.map((s) => (
+                    <li>{s}</li>
+                  ))}
+                </ul>
+              </div>
+              <div class="summary-block gaps">
+                <h3>✗ Lo que falta resolver</h3>
+                <ul>
+                  {r.detailedReport.executiveSummary.gaps.map((g) => (
+                    <li>{g}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            {r.detailedReport.executiveSummary.verdict && (
+              <div class="summary-verdict">{r.detailedReport.executiveSummary.verdict}</div>
+            )}
+          </>
+        ) : (
+          <p class="intro">El resumen ejecutivo no pudo generarse en este momento; el resto del reporte está completo.</p>
+        )}
+      </section>
+
+      <!-- ===== Puntaje, dimensión por dimensión ===== -->
+      <section class="page">
+        <h2 class="section-title"><span class="num">02 ·</span> Tu puntaje, dimensión por dimensión</h2>
+        <p class="intro">
+          El puntaje final (0–100) combina dos partes: un análisis técnico (40%) y un análisis del contenido hecho por IA (60%).
+          Cada dimensión es independiente y se mide contra criterios explícitos.
+        </p>
+
+        <table class="subscore-table">
+          <thead>
+            <tr>
+              <th>Dimensión</th>
+              <th>Puntaje</th>
+              <th>Nivel</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(dimLabels).map((key) => {
+              const k = key as keyof SubScores;
+              const v = r.subScores[k];
+              const bc = bandClass(v);
+              return (
+                <tr>
+                  <td>
+                    <strong>{dimLabels[k].label}</strong>
+                    <div style="font-size:0.86rem;color:var(--muted);margin-top:2px;">
+                      {dimLabels[k].about}
+                    </div>
+                  </td>
+                  <td>
+                    <span class={`subscore-value ${bc}`}>{v}</span>
+                    <span class="subscore-bar"><span class={bc} style={`width:${v}%`}></span></span>
+                  </td>
+                  <td>{bc === 'good' ? 'Bien' : bc === 'mid' ? 'Aceptable' : 'A mejorar'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ===== Análisis técnico ===== -->
+      <section class="page">
+        <h2 class="section-title"><span class="num">03 ·</span> Análisis técnico, punto por punto</h2>
+        <p class="intro">
+          Revisamos 9 señales objetivas de tu sitio. Las que están en rojo son lo que hoy te impide recibir más visitas desde las IAs.
+          Cada check pesa distinto en el puntaje final según su impacto.
+        </p>
+
+        {checkGroups.map((g) => (
+          <div>
+            <h3>{g.title}</h3>
+            <ul class="check-list">
+              {groupChecks(g.ids).map((c) => (
+                <li class={`check-item ${c.passed ? 'ok' : 'fail'}`}>
+                  <span class="icon">{c.passed ? '✓' : '✗'}</span>
+                  <span class="label">{c.label}</span>
+                  <span class="points">{c.points}/{c.maxPoints} pts</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+
+        <div class="methodology">
+          <h3>¿Cómo se calcula el puntaje técnico?</h3>
+          <p>
+            Los 9 checks pesan un total de 100 puntos. El más crítico es el permiso de los robots de IA (25 puntos):
+            si los bloqueas, todo lo demás se vuelve secundario porque las IAs literalmente no pueden leerte.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===== Tu sitio vs. la competencia ===== -->
+      {r.detailedReport && (r.detailedReport.competitors || r.detailedReport.clientComparison) && (
+        <section class="page">
+          <h2 class="section-title"><span class="num">04 ·</span> Tu sitio vs. la competencia</h2>
+          <p class="intro">
+            Cada sitio se evaluó con el mismo método (mismo evaluador, misma rúbrica), así que la comparación es justa.
+            Tu puntaje en esta sección puede diferir levemente del titular porque se mide en la misma escala que los competidores.
+          </p>
+
+          <table class="cmp-table">
+            <thead>
+              <tr>
+                <th>Sitio</th>
+                <th>Puntaje</th>
+                <th>Técnico</th>
+                <th>Negocio</th>
+                <th>Citabilidad</th>
+                <th>Autoridad</th>
+                <th>Geográfica</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.detailedReport.clientComparison && (
+                <tr class="client-row">
+                  <td>{r.domain} <span style="color:var(--muted);font-weight:400;">(tú)</span></td>
+                  <td>
+                    <span class={`score-cell ${bandClass(r.detailedReport.clientComparison.finalScore ?? 0)}`}>
+                      {r.detailedReport.clientComparison.finalScore ?? '—'}/100
+                    </span>
+                  </td>
+                  {r.detailedReport.clientComparison.subScores ? (
+                    <>
+                      <td>{r.detailedReport.clientComparison.subScores.tecnico}</td>
+                      <td>{r.detailedReport.clientComparison.subScores.claridadNegocio}</td>
+                      <td>{r.detailedReport.clientComparison.subScores.citabilidad}</td>
+                      <td>{r.detailedReport.clientComparison.subScores.autoridad}</td>
+                      <td>{r.detailedReport.clientComparison.subScores.claridadGeografica}</td>
+                    </>
+                  ) : (
+                    <td colspan="5" style="color:var(--muted);">—</td>
+                  )}
+                </tr>
+              )}
+              {(r.detailedReport.competitors || []).map((c) => (
+                <tr>
+                  <td>{c.domain}{c.error ? ` <span style="color:var(--bad);font-size:0.86rem;">(no se pudo leer)</span>` : ''}</td>
+                  <td>
+                    <span class={`score-cell ${bandClass(c.finalScore ?? 0)}`}>
+                      {c.finalScore ?? '—'}/100
+                    </span>
+                  </td>
+                  {c.subScores ? (
+                    <>
+                      <td>{c.subScores.tecnico}</td>
+                      <td>{c.subScores.claridadNegocio}</td>
+                      <td>{c.subScores.citabilidad}</td>
+                      <td>{c.subScores.autoridad}</td>
+                      <td>{c.subScores.claridadGeografica}</td>
+                    </>
+                  ) : (
+                    <td colspan="5" style="color:var(--muted);">—</td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {r.detailedReport.competitorsSummary && (
+            <div class="cmp-summary">{r.detailedReport.competitorsSummary}</div>
+          )}
+        </section>
+      )}
+
+      <!-- ===== Preguntas que un cliente le haría a una IA ===== -->
+      {r.detailedReport?.clientQuestions && r.detailedReport.clientQuestions.length > 0 && (
+        <section class="page">
+          <h2 class="section-title"><span class="num">05 ·</span> Preguntas que un cliente le haría a una IA</h2>
+          <p class="intro">
+            Estas son preguntas reales que alguien en tu rubro le haría a una IA.
+            Para cada una evaluamos si tu sitio tiene contenido suficiente para que la IA te cite como respuesta.
+          </p>
+
+          <ul class="q-list">
+            {r.detailedReport.clientQuestions.map((q) => (
+              <li class="q-item">
+                <span class={`q-tag ${q.cubierta ? 'ok' : 'no'}`}>
+                  {q.cubierta ? 'Cubierta' : 'Falta'}
+                </span>
+                <div>
+                  <p class="q-q">{q.pregunta}</p>
+                  <p class="q-nota">{q.nota}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <!-- ===== Plan de acción priorizado ===== -->
+      <section class="page">
+        <h2 class="section-title"><span class="num">06 ·</span> Plan de acción priorizado</h2>
+        <p class="intro">
+          Las recomendaciones están ordenadas por el impacto que tienen en tu visibilidad ante las IA.
+          Las agrupamos en tres fases según la urgencia y el esfuerzo que toman.
+        </p>
+
+        <div class="phase">
+          <div class="phase-header">
+            <h3>Fase 1 · Quick wins (esta semana)</h3>
+            <span class="phase-tag quick">2–5 días</span>
+          </div>
+          {phaseQuick.length > 0 ? (
+            <ol>
+              {phaseQuick.map((rec) => <li>{rec}</li>)}
+            </ol>
+          ) : (
+            <p class="empty">No hay acciones urgentes que puedas resolver esta semana.</p>
+          )}
+        </div>
+
+        <div class="phase">
+          <div class="phase-header">
+            <h3>Fase 2 · Cambios estructurales (este mes)</h3>
+            <span class="phase-tag medium">2–4 semanas</span>
+          </div>
+          {phaseMedium.length > 0 ? (
+            <ol>
+              {phaseMedium.map((rec) => <li>{rec}</li>)}
+            </ol>
+          ) : (
+            <p class="empty">No hay acciones estructurales pendientes para este mes.</p>
+          )}
+        </div>
+
+        <div class="phase">
+          <div class="phase-header">
+            <h3>Fase 3 · Estrategia de mediano plazo (90 días)</h3>
+            <span class="phase-tag long">1–3 meses</span>
+          </div>
+          {phaseLong.length > 0 ? (
+            <ol>
+              {phaseLong.map((rec) => <li>{rec}</li>)}
+            </ol>
+          ) : (
+            <p class="empty">Tu sitio ya cubre las recomendaciones de mediano plazo. Mantén y mide.</p>
+          )}
+        </div>
+      </section>
+
+      <!-- ===== Cierre ===== -->
+      <section class="page">
+        <h2 class="section-title"><span class="num">07 ·</span> Sobre este reporte</h2>
+        <div class="methodology">
+          <h3>Cómo se construye</h3>
+          <p>
+            Este reporte combina un análisis técnico determinista (9 checks objetivos de tu HTML),
+            un análisis de contenido con IA (4 dimensiones: claridad de negocio, citabilidad,
+            autoridad, claridad geográfica), y — en este nivel pagado — una comparación con
+            tus competidores y un análisis de las preguntas que tus clientes le harían a una IA.
+          </p>
+          <p>
+            El puntaje técnico y los 4 subpuntajes de contenido son reproducibles: si vuelves a
+            escanear el mismo sitio en la misma fecha, obtienes los mismos números. La prosa del
+            resumen ejecutivo, la síntesis competitiva y las preguntas-cliente las genera Claude
+            (Haiku 4.5) y se evalúan contra los datos del sitio.
+          </p>
+
+          <h3>Próximo paso recomendado</h3>
+          <p>
+            Empieza por la Fase 1. Son los cambios que vas a sentir primero en cómo las IA leen
+            y recomiendan tu sitio. Cuando estén listos, vuelve a correr el reporte para ver el
+            avance.
+          </p>
+
+          <h3>¿Quieres ayuda implementándolo?</h3>
+          <p>
+            Si prefieres que alguien haga estas mejoras por ti, escríbeme a
+            <a href="https://lukasibanez.dev/#servicios">lukasibanez.dev</a>.
+          </p>
+        </div>
+
+        <div class="report-footer">
+          <span><span class="brand-mark">GEO Scanner</span> · lukasibanez.dev</span>
+          <span>Reporte pagado · generado el {generatedAtFmt}</span>
+        </div>
+      </section>
+    </main>
+
+    <script is:inline>
+      // Auto-abre el diálogo de impresión la primera vez que carga el reporte
+      // (comentado para no sorprender; el usuario usa el botón explícito):
+      // window.addEventListener('load', () => setTimeout(() => window.print(), 800));
+    </script>
+  </body>
+</html>

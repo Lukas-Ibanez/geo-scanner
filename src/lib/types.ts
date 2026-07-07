@@ -89,6 +89,13 @@ export interface ClientQuestion {
   nota: string;
 }
 
+/** Resumen ejecutivo del informe detallado: 3 fortalezas + 3 brechas + veredicto. */
+export interface ExecutiveSummary {
+  strengths: string[];
+  gaps: string[];
+  verdict: string;
+}
+
 /**
  * Informe detallado (nivel 'detailed'): análisis que el escaneo gratis no hace.
  * Cada sección degrada por separado (null) sin romper el resto del informe.
@@ -98,6 +105,7 @@ export interface DetailedReport {
   competitorsSummary: string | null;
   clientComparison: ScoreSnapshot | null; // puntaje del cliente con el MISMO evaluador que los competidores
   clientQuestions: ClientQuestion[] | null;
+  executiveSummary: ExecutiveSummary | null;
   generatedAt: string; // ISO
 }
 

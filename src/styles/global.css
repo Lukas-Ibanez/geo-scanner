@@ -1131,6 +1131,26 @@ a:hover {
 }
 
 /* Botón secundario (más liviano que el primario). */
+/* Botón del reporte PDF (aparece debajo del detallado en el resultado). */
+.pdf-cta {
+  margin-top: 22px;
+  padding: 18px 18px 14px;
+  background: linear-gradient(135deg, var(--blue-50), #fff);
+  border: 1.5px solid var(--blue-200);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+.pdf-cta .btn {
+  margin: 0 auto;
+  padding: 14px 22px;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+}
+.pdf-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
 .btn-secondary {
   background: #fff;
   color: var(--blue-700);

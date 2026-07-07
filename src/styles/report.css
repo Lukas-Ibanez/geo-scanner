@@ -1,0 +1,608 @@
+/* Reporte GEO — estilos print-friendly.
+   Pensado para verse bien en pantalla Y al imprimir / "Guardar como PDF".
+   Cada sección mayor arranca en página nueva. */
+
+:root {
+  --ink: #0f172a;
+  --muted: #475569;
+  --soft: #94a3b8;
+  --line: #e2e8f0;
+  --bg-soft: #f8fafc;
+  --brand: #1e3a8a;
+  --brand-2: #2563eb;
+  --accent: #f59e0b;
+  --good: #16a34a;
+  --mid: #d97706;
+  --bad: #dc2626;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  background: #fff;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+a {
+  color: var(--brand-2);
+  text-decoration: none;
+}
+
+/* Header flotante con acciones (no se imprime) */
+.report-actions {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.report-actions button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.report-actions .btn-primary {
+  background: var(--brand-2);
+  color: #fff;
+}
+.report-actions .btn-secondary {
+  background: var(--bg-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+/* Contenedor principal */
+.report {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 60px 56px;
+}
+section.page {
+  margin: 0 0 40px;
+  padding: 0 0 8px;
+}
+section.page + section.page {
+  border-top: 1px solid var(--line);
+  padding-top: 36px;
+  margin-top: 40px;
+}
+
+/* === Cover === */
+.cover {
+  text-align: center;
+  padding: 90px 20px 60px;
+  border: 0 !important;
+  background: linear-gradient(180deg, #fff 0%, var(--bg-soft) 100%);
+  border-radius: 16px;
+}
+.cover .brand {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-2);
+  padding: 6px 12px;
+  border: 1.5px solid var(--brand-2);
+  border-radius: 999px;
+  margin-bottom: 28px;
+}
+.cover h1 {
+  margin: 0 0 12px;
+  font-size: 2.6rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.cover .subtitle {
+  margin: 0 0 36px;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+.cover .score-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 12px solid var(--brand-2);
+  margin-bottom: 22px;
+  position: relative;
+}
+.cover .score-ring.bad {
+  border-color: var(--bad);
+}
+.cover .score-ring.mid {
+  border-color: var(--mid);
+}
+.cover .score-ring.good {
+  border-color: var(--good);
+}
+.cover .score-ring .num {
+  font-size: 4.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+.cover .score-ring .den {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.cover .verdict {
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 540px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+.cover .meta {
+  margin-top: 36px;
+  font-size: 0.85rem;
+  color: var(--soft);
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+}
+
+/* === Tipografía general === */
+h2.section-title {
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+h2.section-title .num {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-2);
+}
+h3 {
+  font-size: 1.1rem;
+  margin: 22px 0 10px;
+  color: var(--ink);
+}
+p {
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+.intro {
+  color: var(--muted);
+  font-size: 0.96rem;
+  max-width: 640px;
+  margin-bottom: 22px;
+}
+
+/* === Resumen ejecutivo === */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+.summary-block {
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.summary-block.strengths {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.summary-block.gaps {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.summary-block h3 {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.summary-block.strengths h3 {
+  color: var(--good);
+}
+.summary-block.gaps h3 {
+  color: var(--bad);
+}
+.summary-block ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink);
+}
+.summary-block li {
+  margin-bottom: 8px;
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+.summary-verdict {
+  margin-top: 18px;
+  padding: 16px 20px;
+  background: #eff6ff;
+  border-left: 4px solid var(--brand-2);
+  border-radius: 6px;
+  font-size: 1.02rem;
+  color: var(--ink);
+  font-style: italic;
+}
+
+/* === Subscores === */
+.subscore-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 6px;
+}
+.subscore-table th,
+.subscore-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.94rem;
+}
+.subscore-table th {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+.subscore-bar {
+  display: inline-block;
+  width: 100px;
+  height: 8px;
+  background: var(--bg-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+.subscore-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--brand-2);
+}
+.subscore-bar > span.good {
+  background: var(--good);
+}
+.subscore-bar > span.mid {
+  background: var(--mid);
+}
+.subscore-bar > span.bad {
+  background: var(--bad);
+}
+.subscore-value {
+  font-weight: 700;
+  font-size: 0.94rem;
+  display: inline-block;
+  min-width: 38px;
+}
+.subscore-value.good {
+  color: var(--good);
+}
+.subscore-value.mid {
+  color: var(--mid);
+}
+.subscore-value.bad {
+  color: var(--bad);
+}
+
+/* === Lista de checks (técnico) === */
+.check-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.check-item {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  align-items: start;
+}
+.check-item .icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex: none;
+}
+.check-item.ok .icon {
+  background: #dcfce7;
+  color: var(--good);
+}
+.check-item.fail .icon {
+  background: #fee2e2;
+  color: var(--bad);
+}
+.check-item.ok {
+  background: #f7fef9;
+  border-color: #d1fae5;
+}
+.check-item.fail {
+  background: #fef9f9;
+  border-color: #fee2e2;
+}
+.check-item .label {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.check-item .points {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* === Tabla comparativa === */
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 14px;
+  font-size: 0.92rem;
+}
+.cmp-table th,
+.cmp-table td {
+  padding: 10px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.cmp-table th {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+  background: var(--bg-soft);
+}
+.cmp-table .client-row {
+  background: #eff6ff;
+}
+.cmp-table .client-row td:first-child {
+  font-weight: 700;
+  color: var(--brand-2);
+}
+.cmp-table .score-cell {
+  font-weight: 800;
+  font-size: 1rem;
+}
+.cmp-table .score-cell.good {
+  color: var(--good);
+}
+.cmp-table .score-cell.mid {
+  color: var(--mid);
+}
+.cmp-table .score-cell.bad {
+  color: var(--bad);
+}
+.cmp-summary {
+  margin: 14px 0 0;
+  padding: 14px 18px;
+  background: #eff6ff;
+  border-left: 4px solid var(--brand-2);
+  border-radius: 6px;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+/* === Preguntas-cliente === */
+.q-list {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.q-item {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  align-items: start;
+}
+.q-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.q-tag.ok {
+  background: #dcfce7;
+  color: var(--good);
+}
+.q-tag.no {
+  background: #fee2e2;
+  color: var(--bad);
+}
+.q-q {
+  font-weight: 700;
+  font-size: 0.98rem;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+.q-nota {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* === Plan priorizado por fases === */
+.phase {
+  margin: 18px 0;
+  padding: 18px 22px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+.phase-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.phase-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.phase-tag {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.phase-tag.quick {
+  color: var(--good);
+}
+.phase-tag.medium {
+  color: var(--mid);
+}
+.phase-tag.long {
+  color: var(--brand-2);
+}
+.phase ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.phase li {
+  margin-bottom: 10px;
+  font-size: 0.96rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.phase .empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+/* === Footer del reporte === */
+.report-footer {
+  margin-top: 48px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+.report-footer .brand-mark {
+  font-weight: 700;
+  color: var(--brand-2);
+  letter-spacing: 0.04em;
+}
+
+/* === Methodology === */
+.methodology {
+  background: var(--bg-soft);
+  padding: 18px 22px;
+  border-radius: 12px;
+  margin-top: 14px;
+}
+.methodology h3 {
+  margin: 0 0 8px;
+  font-size: 0.96rem;
+}
+.methodology p {
+  font-size: 0.92rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.methodology ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.methodology li {
+  margin-bottom: 4px;
+}
+
+/* === Print === */
+@page {
+  size: A4;
+  margin: 16mm 14mm;
+}
+@media print {
+  body {
+    font-size: 10.5pt;
+    background: #fff;
+  }
+  .report {
+    padding: 0;
+    max-width: 100%;
+  }
+  .report-actions {
+    display: none !important;
+  }
+  section.page + section.page {
+    page-break-before: always;
+    border-top: 0;
+    padding-top: 0;
+  }
+  .cover {
+    page-break-after: always;
+    background: #fff;
+  }
+  .phase,
+  .summary-block,
+  .check-item,
+  .q-item,
+  .cmp-table tr {
+    page-break-inside: avoid;
+  }
+  a {
+    color: var(--ink);
+  }
+  a[href]::after {
+    content: '';
+  }
+}

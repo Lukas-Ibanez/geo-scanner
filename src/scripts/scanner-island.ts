@@ -67,6 +67,10 @@ const LOAD_STEPS = [
 
 let lastUrl = '';
 let lastEmail = '';
+// Lo último que se envió al backend (passphrase + competidores) — lo usamos
+// para construir el link al reporte PDF cuando el resultado es 'detailed'.
+let lastPassphrase = '';
+let lastCompetitors: string[] = [];
 
 function el(tag: string, cls?: string): HTMLElement {
   const node = document.createElement(tag);
@@ -339,6 +343,7 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
     // --- Informe detallado (nivel 'detailed') — solo si la respuesta lo trae ---
     if (r.accessLevel === 'detailed' && r.detailedReport) {
       card.appendChild(renderDetailed(r.detailedReport));
+      card.appendChild(renderPdfButton());
     }
   } else if (r.locked) {
     card.appendChild(renderUnlock(output, r));
@@ -548,6 +553,10 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     }
     const competitors = Array.from(picked).slice(0, 3);
 
+    // Guardamos lo que se mandó al backend para construir luego el link al PDF.
+    lastPassphrase = passRaw;
+    lastCompetitors = competitors;
+
     const body: {
       url: string;
       email: string;
@@ -559,6 +568,31 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     await runScan(output, body, { unlock: true });
   });
 
+  return box;
+}
+
+// Botón "Descargar reporte PDF" — abre /report en nueva ventana con los params
+// del último escaneo detailed. El passphrase viaja en query string porque es
+// la versión de pruebas; cuando se enchufe Stripe se reemplaza por un token de
+// sesión y esto deja de ser necesario.
+function renderPdfButton(): HTMLElement {
+  const box = el('div', 'pdf-cta');
+  const a = document.createElement('a');
+  a.className = 'btn btn-primary btn-block';
+  a.textContent = 'Descargar reporte PDF';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  const sp = new URLSearchParams();
+  if (lastUrl) sp.set('url', lastUrl);
+  if (lastEmail) sp.set('email', lastEmail);
+  if (lastPassphrase) sp.set('passphrase', lastPassphrase);
+  if (lastCompetitors.length) sp.set('competitors', lastCompetitors.join(','));
+  a.href = '/report?' + sp.toString();
+  box.appendChild(a);
+  const hint = el('p', 'pdf-hint');
+  hint.textContent =
+    'Abre el reporte en una pestaña nueva. Usa “Imprimir → Guardar como PDF” para bajarlo.';
+  box.appendChild(hint);
   return box;
 }
 

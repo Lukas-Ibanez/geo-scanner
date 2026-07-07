@@ -1,8 +1,9 @@
 // Informe detallado (nivel 'detailed', de pago): análisis que el escaneo gratis
-// no hace. Genera DOS secciones independientes; si una falla devuelve null en esa
-// sección SIN romper el resto del informe. Solo usa Claude (callClaudeTool) — sin
-// web search ni otras IAs.
+// no hace. Genera TRES secciones independientes; si una falla devuelve null en
+// esa sección SIN romper el resto del informe. Solo usa Claude (callClaudeTool)
+// — sin web search ni otras IAs.
 //
+//   0) Resumen ejecutivo: 3 fortalezas + 3 brechas + veredicto (1 línea).
 //   1) Comparación con competidores que ingresa el cliente.
 //   2) Preguntas-cliente: qué le preguntaría a una IA y si el sitio lo cubre.
 import type {
@@ -13,6 +14,7 @@ import type {
   DetailedReport,
   CompetitorComparison,
   ClientQuestion,
+  ExecutiveSummary,
 } from './types';
 import { validateAndNormalize } from './validate';
 import { fetchSite } from './fetchSite';
@@ -38,15 +40,19 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
   const model = args.env.DETAILED_MODEL || DEFAULT_DETAILED_MODEL;
   const generatedAt = new Date().toISOString();
 
-  // Las dos secciones degradan por separado: cada promesa atrapa su propio error
+  // Las tres secciones degradan por separado: cada promesa atrapa su propio error
   // para que el fallo de una NO tumbe el informe completo.
-  const [competitorSection, clientQuestions] = await Promise.all([
+  const [competitorSection, clientQuestions, executiveSummary] = await Promise.all([
     buildCompetitorSection(args, model).catch((err) => {
       console.error('detailed: competidores falló', err);
       return { competitors: null, competitorsSummary: null, clientComparison: null };
     }),
     buildClientQuestions(args, model).catch((err) => {
       console.error('detailed: preguntas-cliente falló', err);
+      return null;
+    }),
+    buildExecutiveSummary(args, model).catch((err) => {
+      console.error('detailed: resumen ejecutivo falló', err);
       return null;
     }),
   ]);
@@ -56,7 +62,99 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
     competitorsSummary: competitorSection.competitorsSummary,
     clientComparison: competitorSection.clientComparison,
     clientQuestions,
+    executiveSummary,
     generatedAt,
+  };
+}
+
+// --- Resumen ejecutivo (sección 0 del informe detallado) ---
+// 1 call a Claude que produce 3 fortalezas + 3 brechas + veredicto de una
+// línea. Es lo primero que se lee en el reporte PDF — tiene que picar.
+const SUMMARY_SYSTEM = `Eres un consultor GEO senior. Dado el puntaje (0-100), los subpuntajes, las verificaciones técnicas y las recomendaciones de un sitio, escribe un RESUMEN EJECUTIVO en español, en lenguaje de NEGOCIO (sin jerga técnica).
+
+Devuelve EXACTAMENTE este JSON:
+{
+  "strengths": ["...", "...", "..."],   // 3 frases cortas sobre lo que YA está bien (impacto en el negocio, no técnico)
+  "gaps":      ["...", "...", "..."],   // 3 frases cortas sobre lo que falta (impacto en el negocio)
+  "verdict":   "..."                    // 1 frase de cierre, directa, en lenguaje de dueño de negocio
+}
+
+Reglas:
+- Cada strength/gap es 1 frase de 10-25 palabras.
+- strengths van primero (lo que el dueño puede mostrar con orgullo), gaps después (lo que tiene que resolver).
+- Si los bots de IA están bloqueados, el primer gap DEBE ser ese.
+- PROHIBIDO usar jerga técnica: "JSON-LD", "schema", "meta", "robots.txt", "canonical", "sitemap", "H1", etc.
+- Basa todo SOLO en los datos entregados, no inventes.`;
+
+const SUMMARY_TOOL_NAME = 'resumen_ejecutivo_geo';
+const SUMMARY_TOOL_DESCRIPTION =
+  'Devuelve 3 fortalezas, 3 brechas y 1 veredicto para el resumen ejecutivo de un reporte GEO.';
+const SUMMARY_INPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    strengths: { type: 'array', items: { type: 'string' } },
+    gaps: { type: 'array', items: { type: 'string' } },
+    verdict: { type: 'string' },
+  },
+  required: ['strengths', 'gaps', 'verdict'],
+};
+
+async function buildExecutiveSummary(
+  args: BuildDetailedReportArgs,
+  model: string
+): Promise<ExecutiveSummary | null> {
+  const title = args.signals.title || hostnameOf(args.site.finalUrl) || 'el sitio';
+
+  // Tomamos datos del análisis técnico ya calculado: puntaje final, subpuntajes
+  // (re-evaluando con método manzana-con-manzana para que sea consistente con
+  // la comparativa que aparece más adelante en el mismo reporte).
+  const tech = computeTechnical(args.signals, args.site);
+  const content = await evaluateWithClaude(args.signals, args.env);
+  const { finalScore, subScores } = combineScores(tech, content);
+
+  const lines: string[] = [
+    `Sitio: ${title} (${args.site.finalUrl})`,
+    `Puntaje final: ${finalScore}/100`,
+    `Subpuntajes (0-100): técnico ${subScores.tecnico}, claridadNegocio ${subScores.claridadNegocio}, citabilidad ${subScores.citabilidad}, autoridad ${subScores.autoridad}, claridadGeografica ${subScores.claridadGeografica}`,
+    '',
+    'Verificaciones técnicas (passed/failed):',
+  ];
+  for (const c of tech.checks) {
+    lines.push(`- [${c.passed ? 'OK' : 'FALTA'}] ${c.label} (${c.points}/${c.maxPoints} pts)`);
+  }
+  lines.push('', 'Recomendaciones de la IA:');
+  if (content.recomendaciones.length) {
+    for (const r of content.recomendaciones) lines.push(`- ${r}`);
+  } else {
+    lines.push('- (sin recomendaciones)');
+  }
+
+  const input = await callClaudeTool<{
+    strengths?: unknown;
+    gaps?: unknown;
+    verdict?: unknown;
+  }>({
+    system: SUMMARY_SYSTEM,
+    userPrompt: lines.join('\n'),
+    toolName: SUMMARY_TOOL_NAME,
+    toolDescription: SUMMARY_TOOL_DESCRIPTION,
+    inputSchema: SUMMARY_INPUT_SCHEMA,
+    env: args.env,
+    model,
+  });
+  if (!input) return null;
+  const strengths = Array.isArray(input.strengths)
+    ? (input.strengths.filter((s) => typeof s === 'string') as string[]).slice(0, 3)
+    : [];
+  const gaps = Array.isArray(input.gaps)
+    ? (input.gaps.filter((s) => typeof s === 'string') as string[]).slice(0, 3)
+    : [];
+  const verdict = typeof input.verdict === 'string' ? input.verdict.trim() : '';
+  if (!strengths.length && !gaps.length && !verdict) return null;
+  return {
+    strengths: strengths.map((s) => s.trim()).filter(Boolean),
+    gaps: gaps.map((s) => s.trim()).filter(Boolean),
+    verdict,
   };
 }
 
