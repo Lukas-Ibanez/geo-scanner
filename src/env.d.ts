@@ -36,6 +36,12 @@ interface Env {
   WORKERSAI_MODEL?: string; // override del modelo de Workers AI
   RESEND_FROM?: string; // remitente verificado en Resend, p.ej. "GEO Scanner <informe@geo.lukasibanez.dev>"
   RESEND_REPLY_TO?: string; // correo de respuesta opcional
+
+  // --- Cloudflare Turnstile (protección anti-bot) ---
+  // TURNSTILE_SITE_KEY va como variable pública (en wrangler.toml [vars]).
+  // TURNSTILE_SECRET va como secret (en .dev.vars local / wrangler secret en prod).
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET?: string;
 }
 
 type Runtime = import('@astrojs/cloudflare').Runtime<Env>;

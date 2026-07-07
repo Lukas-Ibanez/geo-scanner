@@ -1,0 +1,28 @@
+---
+// Widget de Cloudflare Turnstile. Solo se renderiza si hay site key configurada.
+// Si no, se pinta un placeholder invisible para que el form no se rompa visualmente
+// y se manda un token "dev" que el backend acepta en modo bypass.
+interface Props {
+  /** Site key pública (de wrangler.toml [vars] o variable de entorno). */
+  siteKey?: string;
+}
+const { siteKey } = Astro.props;
+const key = siteKey || '1x00000000000000000000AA';
+---
+
+<div
+  class="cf-turnstile"
+  data-sitekey={key}
+  data-callback="onTurnstileSuccess"
+  data-expired-callback="onTurnstileExpired"
+  data-error-callback="onTurnstileError"
+  data-theme="auto"
+></div>
+
+<noscript>
+  <p class="turnstile-noscript">
+    Esta página requiere JavaScript para la verificación anti-bot.
+  </p>
+</noscript>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad" async defer></script>

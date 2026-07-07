@@ -8,6 +8,7 @@ import { fetchSite } from '../../lib/fetchSite';
 import { parseHtml } from '../../lib/parseHtml';
 import { suggestCompetitors } from '../../lib/competitorSuggest';
 import { checkRateLimit } from '../../lib/rateLimit';
+import { verifyTurnstile } from '../../lib/turnstile';
 
 export const prerender = false;
 
@@ -27,11 +28,30 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
   try {
     const env = locals.runtime.env;
 
-    let payload: { url?: unknown };
+    let payload: { url?: unknown; 'cf-turnstile-response'?: unknown };
     try {
-      payload = (await request.json()) as { url?: unknown };
+      payload = (await request.json()) as {
+        url?: unknown;
+        'cf-turnstile-response'?: unknown;
+      };
     } catch {
       return json({ error: 'No pudimos leer los datos enviados.' }, 400);
+    }
+
+    // Validación anti-bot (Turnstile). Como el usuario YA pasó por /api/scan
+    // (que validó Turnstile), esto es una capa extra de defensa.
+    const ip =
+      request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
+    const turn = await verifyTurnstile(
+      env.TURNSTILE_SECRET,
+      payload?.['cf-turnstile-response'],
+      ip
+    );
+    if (!turn.success) {
+      return json(
+        { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
+        403
+      );
     }
 
     const valid = validateAndNormalize(payload?.url, null);
@@ -41,7 +61,6 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     // Mismo rate-limit que /api/scan (mismo KV, mismo contador). Si ya alcanzó
     // el tope por escaneo, no dejamos pedir sugerencias tampoco — es la misma
     // superficie de abuso.
-    const ip = request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
     const whitelist = (env.RATE_LIMIT_WHITELIST || '')
       .split(',')
       .map((s) => s.trim())

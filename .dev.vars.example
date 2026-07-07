@@ -48,3 +48,9 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # ANTHROPIC_MODEL=claude-haiku-4-5
 # Tope global de llamadas a Claude por día (Claude es de pago; 0 = sin tope)
 # ANTHROPIC_DAILY_LIMIT=200
+
+# --- Cloudflare Turnstile (anti-bot) ---
+# En el dashboard de Cloudflare → Turnstile → agregar sitio, copiar la SECRET key.
+# Si la dejas vacía, el server NO valida el token (modo dev) y la SITE_KEY de
+# prueba (1x00000000000000000000AA en wrangler.toml) siempre pasa.
+# TURNSTILE_SECRET=0x4AAAAAAA...

@@ -1,18 +1,23 @@
 ---
+import SiteNav from '../components/SiteNav.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import '../styles/global.css';
+
 interface Props {
   title?: string;
   description?: string;
+  /** Identificador de página para marcar el link activo en la nav. */
+  active?: 'home' | 'scan' | 'report' | 'about';
 }
 
 const {
   title = 'GEO Scanner — ¿Te encuentran las IA? Audita tu sitio gratis',
   description = 'Escanea tu sitio gratis y descubre si las IA (ChatGPT, Perplexity, Gemini, Google AI) están listas para recomendarte. Puntaje claro y plan de mejoras.',
+  active = 'home',
 } = Astro.props;
 
 const site = Astro.site ?? new URL('https://geo.lukasibanez.dev');
 const canonical = new URL(Astro.url.pathname, site).toString();
-
-import '../styles/global.css';
 ---
 
 <!doctype html>
@@ -44,13 +49,18 @@ import '../styles/global.css';
     />
     <slot name="head" />
   </head>
-  <body>
+  <body data-page={active}>
     <!-- blobs pastel de fondo (decorativos) -->
     <div class="bg-blobs" aria-hidden="true">
       <span class="blob blob-1"></span>
       <span class="blob blob-2"></span>
       <span class="blob blob-3"></span>
     </div>
+
+    <SiteNav active={active} />
+
     <slot />
+
+    <SiteFooter />
   </body>
 </html>

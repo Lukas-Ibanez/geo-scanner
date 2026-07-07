@@ -12,6 +12,7 @@ import type { SubScores, TechnicalCheck } from '../lib/types';
 import { buildScan, ScanError } from '../lib/scanFlow';
 import '../styles/report.css';
 
+// /report es SSR (necesita la sesión del usuario) — no se prerenderea.
 export const prerender = false;
 
 const params = Astro.url.searchParams;
@@ -145,7 +146,8 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
   </head>
   <body>
     <div class="report-actions">
-      <button class="btn-secondary" onclick="window.close()">← Cerrar</button>
+      <a class="btn-secondary" href="/scan">← Nuevo escaneo</a>
+      <a class="btn-secondary" href="/">Volver al inicio</a>
       <button class="btn-primary" onclick="window.print()">Imprimir / Guardar como PDF</button>
     </div>
 

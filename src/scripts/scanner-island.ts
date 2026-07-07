@@ -1,5 +1,6 @@
 // Island del escáner (vanilla JS, sin framework). Maneja submit, loading por
-// pasos, render del resultado (gauge SVG animado) y el gating (teaser → desbloqueo).
+// pasos, render del resultado (gauge SVG animado), gating (teaser → desbloqueo)
+// y Turnstile. Vive SOLO en /scan.
 
 const ENDPOINT = '/api/scan';
 // CTA final → sección de servicios del portafolio. Cambia esta URL si hace falta.
@@ -72,6 +73,62 @@ let lastEmail = '';
 let lastPassphrase = '';
 let lastCompetitors: string[] = [];
 
+// --- Estado de Turnstile ---
+// El widget entrega el token vía callback global. Lo guardamos acá para
+// incluirlo en el POST y para habilitar/deshabilitar el botón.
+declare global {
+  interface Window {
+    onTurnstileSuccess?: (token: string) => void;
+    onTurnstileExpired?: () => void;
+    onTurnstileError?: () => void;
+    onTurnstileLoad?: () => void;
+    turnstile?: {
+      reset: (widgetId?: string) => void;
+    };
+  }
+}
+
+let turnstileToken: string | null = null;
+let turnstileReady = false;
+
+function getTurnstileToken(): string | null {
+  // 1) Token guardado por el callback.
+  if (turnstileToken) return turnstileToken;
+  // 2) Fallback: leer el input que el widget inyecta en el DOM.
+  const input = document.querySelector<HTMLInputElement>(
+    'input[name="cf-turnstile-response"]'
+  );
+  return input && input.value ? input.value : null;
+}
+
+function setSubmitEnabled(enabled: boolean): void {
+  const btn = document.getElementById('scan-btn') as HTMLButtonElement | null;
+  if (btn) btn.disabled = !enabled;
+}
+
+// Callbacks globales que el widget de Turnstile invoca.
+// (definidos en window para que Turnstile los encuentre).
+window.onTurnstileSuccess = (token: string) => {
+  turnstileToken = token;
+  // Si la URL ya está escrita, habilitamos el botón.
+  const url = (document.getElementById('url') as HTMLInputElement | null)?.value.trim() || '';
+  setSubmitEnabled(url.length > 0);
+};
+window.onTurnstileExpired = () => {
+  turnstileToken = null;
+  setSubmitEnabled(false);
+};
+window.onTurnstileError = () => {
+  turnstileToken = null;
+  setSubmitEnabled(false);
+};
+window.onTurnstileLoad = () => {
+  turnstileReady = true;
+  // Si la URL ya está escrita, dejamos el botón listo (esperando token).
+  const url = (document.getElementById('url') as HTMLInputElement | null)?.value.trim() || '';
+  setSubmitEnabled(url.length > 0 && !!turnstileToken);
+};
+
 function el(tag: string, cls?: string): HTMLElement {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
@@ -89,6 +146,16 @@ export function initScanner(): void {
   const output = document.getElementById('scan-output');
   if (!form || !output) return;
 
+  // El botón arranca deshabilitado hasta tener URL + token de Turnstile.
+  setSubmitEnabled(false);
+
+  // Habilitar el botón cuando se escribe una URL (Turnstile sigue siendo requisito).
+  const urlInput = document.getElementById('url') as HTMLInputElement | null;
+  urlInput?.addEventListener('input', () => {
+    const ok = (urlInput.value || '').trim().length > 0 && (turnstileReady ? !!turnstileToken : true);
+    setSubmitEnabled(ok);
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);
@@ -97,6 +164,17 @@ export function initScanner(): void {
     if (!url) {
       showFormError(form, 'Escribe la dirección de tu sitio.');
       return;
+    }
+    // Si Turnstile ya cargó, exigimos token. Si no, dejamos pasar (modo dev).
+    if (turnstileReady) {
+      const token = getTurnstileToken();
+      if (!token) {
+        showFormError(
+          form,
+          'Esperando la verificación anti-bot. Si no aparece, recarga la página.'
+        );
+        return;
+      }
     }
     clearFormError(form);
     lastUrl = url;
@@ -117,11 +195,20 @@ async function runScan(
   // formulario ya indica "Enviando…" mientras se procesa.
   const stopLoading = opts.unlock ? () => {} : renderLoading(output);
 
+  // Adjuntamos el token de Turnstile al body (si existe) en el primer submit
+  // del escaneo base. En el unlock, el token ya se consumió; dejamos que Turnstile
+  // maneje re-emisión si la necesita.
+  const fullBody: Record<string, unknown> = { ...body };
+  if (!opts.unlock) {
+    const token = getTurnstileToken();
+    if (token) fullBody['cf-turnstile-response'] = token;
+  }
+
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(fullBody),
     });
     const json = (await res.json().catch(() => null)) as ScanResult | { error?: string } | null;
     stopLoading();
@@ -129,13 +216,20 @@ async function runScan(
     if (!res.ok) {
       let msg = (json && 'error' in json && json.error) || '';
       if (!msg) {
-        // Sin JSON de error (p.ej. 502 de plataforma cuando el sitio destino está
-        // protegido por Cloudflare y no es alcanzable): mensaje claro y honesto en
-        // vez de sugerir un reintento que no va a ayudar.
         msg =
           res.status >= 500
             ? 'No pudimos leer este sitio. Puede estar protegido contra lectores automáticos o no estar disponible en este momento. Prueba con otra página.'
             : 'Algo salió mal. Inténtalo de nuevo en un momento.';
+      }
+      // Si el server rechazó Turnstile, reseteamos el widget para que el usuario
+      // pueda reintentar sin recargar la página.
+      if (res.status === 403) {
+        try {
+          window.turnstile?.reset();
+        } catch {
+          /* noop */
+        }
+        turnstileToken = null;
       }
       renderError(output, msg);
       return;
@@ -190,6 +284,18 @@ function renderError(output: HTMLElement, message: string): void {
   p.style.fontWeight = '600';
   p.textContent = message;
   box.appendChild(p);
+  // Botón "Intentar de nuevo" — limpia el output y hace scroll al form.
+  const retry = el('button', 'btn btn-secondary');
+  retry.type = 'button';
+  retry.textContent = 'Volver al formulario';
+  retry.style.marginTop = '14px';
+  retry.addEventListener('click', () => {
+    output.hidden = true;
+    output.innerHTML = '';
+    const form = document.getElementById('scan-form');
+    form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  box.appendChild(retry);
   output.appendChild(box);
   output.hidden = false;
 }

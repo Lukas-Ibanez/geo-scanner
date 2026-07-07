@@ -43,12 +43,21 @@ GEMINI_DAILY_LIMIT = "450"
 # DETAILED_MODEL = "claude-haiku-4-5"
 # DETAILED_PASSPHRASE NO va aquí: es un secret (ver abajo).
 
+# --- Cloudflare Turnstile (protección anti-bot) ---
+# La SITE_KEY es pública: va aquí. La SECRET va en `wrangler pages secret put TURNSTILE_SECRET`.
+# Para empezar a probar sin sacar keys, podés usar la test key de Cloudflare
+# (1x00000000000000000000AA — siempre pasa; el server la acepta sin chequear
+# mientras no haya TURNSTILE_SECRET configurado).
+# Cuando saques las reales, reemplazá esto Y configurá el secret.
+TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
+
 # Secrets (no van aquí):
 #   Local:  .dev.vars
 #   Prod:   wrangler pages secret put GEMINI_API_KEY
 #           wrangler pages secret put ANTHROPIC_API_KEY     (si AI_PROVIDER=claude o informe detallado)
 #           wrangler pages secret put DETAILED_PASSPHRASE   (desbloquea el informe 'detailed')
 #           wrangler pages secret put RESEND_API_KEY
+#           wrangler pages secret put TURNSTILE_SECRET      (clave anti-bot — vacío = modo dev)
 #
 # RESEND_FROM / RESEND_REPLY_TO pueden ir como variables de entorno del proyecto
 # en el panel de Cloudflare Pages, o como secrets si se prefiere.

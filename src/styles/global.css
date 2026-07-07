@@ -37,7 +37,8 @@
   --shadow-sm: 0 4px 16px rgba(28, 51, 110, 0.06);
   --shadow: 0 18px 48px rgba(28, 51, 110, 0.1);
   --shadow-lg: 0 30px 70px rgba(28, 51, 110, 0.14);
-  --maxw: 1080px;
+  --maxw: 1120px;
+  --nav-h: 72px;
 
   --font:
     'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -124,7 +125,7 @@ a:hover {
   left: 45%;
 }
 
-/* ---------- Header ---------- */
+/* ---------- Header (legacy single-page) ---------- */
 .site-header {
   padding: 24px 0;
 }
@@ -135,6 +136,7 @@ a:hover {
   font-weight: 800;
   font-size: 1.1rem;
   color: var(--ink);
+  text-decoration: none;
 }
 .brand:hover {
   text-decoration: none;
@@ -145,12 +147,182 @@ a:hover {
   border-radius: 10px;
   background: linear-gradient(135deg, var(--blue-500), var(--peach-400));
   box-shadow: 0 6px 16px rgba(79, 124, 255, 0.4);
+  flex: none;
+}
+.brand-text {
+  line-height: 1;
+}
+.brand-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--peach-500);
+  background: var(--peach-100);
+  border: 1px solid var(--peach-200);
+  border-radius: 999px;
 }
 
-/* ---------- Hero ---------- */
+/* ---------- SiteNav (header sticky) ---------- */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(249, 251, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid rgba(231, 236, 246, 0.7);
+}
+.site-nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: var(--nav-h);
+}
+.site-nav .brand {
+  font-size: 1.05rem;
+}
+.site-nav .brand .dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+}
+.site-nav-links {
+  display: none;
+  flex: 1;
+  gap: 6px;
+  justify-content: center;
+}
+.site-nav-links a {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--ink);
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+.site-nav-links a:hover {
+  text-decoration: none;
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+.site-nav-links a.active {
+  background: var(--blue-50);
+  color: var(--blue-700);
+  font-weight: 600;
+}
+.site-nav-cta {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.site-nav-burger {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  background: transparent;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.site-nav-burger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+  transition: transform 0.18s, opacity 0.18s;
+}
+.site-nav-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 22px 22px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+.site-nav-mobile a {
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ink);
+  border-radius: 10px;
+}
+.site-nav-mobile a:hover {
+  background: var(--blue-50);
+  text-decoration: none;
+}
+.site-nav-mobile .btn {
+  margin-top: 8px;
+}
+
+/* ---------- SiteFooter ---------- */
+.site-footer {
+  margin-top: 64px;
+  padding: 48px 0 28px;
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, transparent, var(--blue-50) 60%);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.site-footer-inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line);
+}
+.site-footer-brand .brand {
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.site-footer-tag {
+  margin: 10px 0 0;
+  max-width: 32ch;
+  color: var(--muted);
+}
+.site-footer-col h4 {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.site-footer-col a {
+  display: block;
+  padding: 5px 0;
+  color: var(--muted);
+}
+.site-footer-col a:hover {
+  color: var(--blue-700);
+  text-decoration: none;
+}
+.site-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 22px;
+  font-size: 0.84rem;
+}
+
+/* ---------- Hero (landing) ---------- */
 .hero {
   text-align: center;
-  padding: 36px 0 10px;
+  padding: 64px 0 48px;
 }
 .eyebrow {
   display: inline-flex;
@@ -202,6 +374,114 @@ a:hover {
   color: var(--muted);
   max-width: 58ch;
   margin: 18px auto 0;
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin: 30px auto 0;
+}
+.btn-lg {
+  padding: 17px 28px;
+  font-size: 1.08rem;
+  border-radius: 14px;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--blue-700);
+  border: 1.5px solid var(--line);
+  font-weight: 600;
+}
+.btn-ghost:hover:not([disabled]) {
+  background: #fff;
+  border-color: var(--blue-200);
+  color: var(--blue-700);
+}
+.arrow {
+  display: inline-block;
+  transition: transform 0.18s;
+}
+.btn:hover .arrow {
+  transform: translateX(3px);
+}
+
+/* ---------- Section head (reutilizable) ---------- */
+.section-head {
+  max-width: 720px;
+  margin: 0 auto 28px;
+  text-align: center;
+}
+.section-kicker {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue-700);
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: 999px;
+}
+.section-head h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+}
+.section-head .sub {
+  color: var(--muted);
+  margin: 0;
+}
+.section-cta {
+  margin-top: 36px;
+  text-align: center;
+}
+.cta-line {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 1.02rem;
+}
+.section-alt {
+  background: linear-gradient(180deg, transparent, var(--blue-50) 30%, transparent);
+  border-radius: 0;
+}
+
+/* ---------- Features (Qué es) ---------- */
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-top: 12px;
+}
+.feature {
+  padding: 28px 24px;
+  text-align: left;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.feature:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+.feature-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  margin-bottom: 14px;
+  font-size: 1.6rem;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: 14px;
+}
+.feature h3 {
+  margin: 0 0 6px;
+  font-size: 1.12rem;
+}
+.feature p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.98rem;
 }
 
 /* ---------- Card ---------- */
@@ -365,7 +645,7 @@ a:hover {
 
 /* ---------- Sections ---------- */
 .section {
-  padding: 56px 0;
+  padding: 64px 0;
 }
 .section-center {
   text-align: center;
@@ -886,16 +1166,6 @@ a:hover {
   margin-top: 18px;
 }
 
-/* footer */
-.site-footer {
-  margin-top: 56px;
-  padding: 32px 0 44px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.9rem;
-  text-align: center;
-}
-
 /* ---------- Email-sent confirmation ---------- */
 .sent-note {
   margin: 22px 0 0;
@@ -909,7 +1179,198 @@ a:hover {
   text-align: center;
 }
 
-/* ---------- Report preview (mockup estático) ---------- */
+/* ============================================================
+   /scan — página dedicada de escaneo
+   ============================================================ */
+.scan-page {
+  padding-top: 0;
+}
+.scan-header {
+  padding: 32px 0 8px;
+  text-align: left;
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.back-link:hover {
+  color: var(--blue-700);
+  background: #fff;
+  border-color: var(--blue-200);
+  text-decoration: none;
+}
+.scan-header h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.9rem, 4.2vw, 2.6rem);
+  letter-spacing: -0.03em;
+}
+.scan-sub {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.8vw, 1.12rem);
+}
+
+.scan-form-section {
+  padding: 28px 0 24px;
+}
+.scan-form-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.scan-form-card {
+  position: relative;
+  padding: 32px 28px;
+  border: 1.5px solid var(--blue-100);
+  background: linear-gradient(180deg, #fff, var(--blue-50) 220%);
+}
+.scan-form-badge {
+  position: absolute;
+  top: -12px;
+  left: 22px;
+  padding: 5px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--good);
+  background: #e9f8f1;
+  border: 1px solid #bfe9d6;
+  border-radius: 999px;
+}
+.scan-form-card .scan-form {
+  margin-top: 4px;
+}
+
+/* Separador bajo los inputs, antes de Turnstile */
+.scan-form-card .scan-form > .btn-primary {
+  margin-top: 4px;
+}
+
+/* Turnstile container — centrado y con un poco de aire */
+.cf-turnstile {
+  margin: 18px auto 0;
+  display: flex;
+  justify-content: center;
+}
+.turnstile-noscript {
+  margin: 14px 0 0;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: #9a2b2b;
+  background: #fdecec;
+  border: 1px solid #f6c9c9;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+/* Aside con "qué vas a obtener" */
+.scan-aside {
+  padding: 4px 4px 4px 8px;
+}
+.scan-aside h3 {
+  margin: 4px 0 16px;
+  font-size: 1.15rem;
+}
+.scan-includes {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.scan-includes li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.scan-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--good);
+  border-radius: 8px;
+  flex: none;
+}
+.scan-includes strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.scan-includes p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.scan-trust {
+  padding: 16px 18px;
+  background: linear-gradient(180deg, var(--blue-50), #fff);
+  border: 1px dashed var(--blue-200);
+  border-radius: var(--radius-md);
+}
+.scan-trust p {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.scan-trust p:last-child {
+  margin-bottom: 0;
+}
+.scan-trust strong {
+  color: var(--ink);
+}
+.scan-byline {
+  font-size: 0.86rem !important;
+  color: var(--muted) !important;
+}
+
+/* Output section (resultado se inyecta aquí) */
+.scan-output-section {
+  padding: 0 0 32px;
+}
+.scan-output-section:empty {
+  display: none;
+}
+
+/* Mini-FAQ de la página /scan */
+.scan-faq {
+  padding: 48px 0 24px;
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, transparent, var(--blue-50) 100%);
+}
+.scan-faq h2 {
+  text-align: center;
+  margin: 0 0 24px;
+  font-size: clamp(1.4rem, 2.8vw, 1.8rem);
+}
+.scan-faq-grid {
+  margin-top: 0;
+  grid-template-columns: 1fr;
+}
 .preview-head {
   margin-bottom: 28px;
 }
@@ -1034,6 +1495,19 @@ a:hover {
 
 /* ---------- Responsive ---------- */
 @media (min-width: 720px) {
+  .site-nav-links {
+    display: flex;
+  }
+  .site-nav-burger {
+    display: none;
+  }
+  .site-nav-cta {
+    margin-left: 0;
+  }
+  .site-footer-inner {
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 48px;
+  }
   .steps {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -1056,6 +1530,21 @@ a:hover {
   }
   .preview-verdict {
     text-align: left;
+  }
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .scan-form-container {
+    grid-template-columns: 1.3fr 1fr;
+    align-items: start;
+    gap: 40px;
+  }
+  .scan-form-card {
+    position: sticky;
+    top: calc(var(--nav-h) + 18px);
+  }
+  .scan-faq-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

@@ -1,0 +1,45 @@
+---
+// Footer compartido por todas las páginas.
+const AUTHOR_URL = 'https://lukasibanez.dev';
+const GITHUB_URL = 'https://github.com/Lukas-Ibanez';
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container site-footer-inner">
+    <div class="site-footer-brand">
+      <a class="brand" href="/">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="brand-text">GEO Scanner</span>
+      </a>
+      <p class="site-footer-tag">
+        Auditoría de visibilidad en motores de búsqueda con IA. Hecho en Chile 🇨🇱.
+      </p>
+    </div>
+
+    <nav class="site-footer-col" aria-label="Producto">
+      <h4>Producto</h4>
+      <a href="/scan">Escanear un sitio</a>
+      <a href="/#how">Cómo funciona</a>
+      <a href="/#method">Metodología</a>
+    </nav>
+
+    <nav class="site-footer-col" aria-label="Recursos">
+      <h4>Recursos</h4>
+      <a href="/#faq">Preguntas frecuentes</a>
+      <a href={AUTHOR_URL} rel="author">Sobre Lukas</a>
+      <a href={GITHUB_URL} rel="me">Código en GitHub</a>
+    </nav>
+
+    <nav class="site-footer-col" aria-label="Legal">
+      <h4>Legal</h4>
+      <a href="#faq">Preguntas</a>
+      <a href="mailto:hola@lukasibanez.dev">Contacto</a>
+    </nav>
+  </div>
+
+  <div class="container site-footer-bottom">
+    <span>© {year} Lukas Ibáñez · GEO Scanner</span>
+    <span>Hecho con infraestructura de Cloudflare</span>
+  </div>
+</footer>

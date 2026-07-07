@@ -1,13 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
-import ScanForm from '../components/ScanForm.astro';
 
 // Landing estática (irónicamente, debe estar bien optimizada para GEO ella misma).
 export const prerender = true;
-
-// Flujo de captura del correo. 'one-step' = correo junto a la URL.
-// 'two-step' = puntaje gratis + correo para recibir el informe completo.
-const REVEAL_FLOW: 'one-step' | 'two-step' = 'two-step';
 
 const SITE = 'https://geo.lukasibanez.dev';
 const AUTHOR_URL = 'https://lukasibanez.dev';
@@ -65,8 +60,31 @@ const industries = [
   },
 ];
 
+// Features resumidos (página principal "Qué es")
+const features = [
+  {
+    icon: '🔍',
+    title: 'Análisis técnico',
+    body: '9 señales objetivas: robots de IA, datos estructurados, metadatos, sitemap y más. Cada una con su peso en el puntaje.',
+  },
+  {
+    icon: '🧠',
+    title: 'Análisis de contenido con IA',
+    body: 'Una IA evalúa tu sitio en 4 dimensiones: claridad de negocio, citabilidad, autoridad y zona geográfica.',
+  },
+  {
+    icon: '📊',
+    title: 'Puntaje de 0 a 100',
+    body: 'Un número claro y reproducible, con banda de color (rojo / naranja / verde) para saber de un vistazo dónde estás parado.',
+  },
+  {
+    icon: '📝',
+    title: 'Plan de mejoras en lenguaje de negocio',
+    body: 'Recomendaciones concretas ordenadas por impacto, sin jerga técnica. Las entiende el dueño del negocio, no solo el dev.',
+  },
+];
+
 // Metodología: refleja el puntaje real (técnico 40% + contenido 60%).
-// Los pesos del bloque técnico salen de src/lib/technicalScore.ts.
 const techChecks = [
   { w: 25, label: 'Las IA pueden leer tu sitio (no bloqueas a sus robots)' },
   { w: 15, label: 'Datos estructurados que describen tu negocio' },
@@ -153,16 +171,11 @@ const jsonLd = {
 };
 ---
 
-<Base>
+<Base active="home">
   <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
 
-  <header class="site-header">
-    <div class="container">
-      <a class="brand" href="/"><span class="dot" aria-hidden="true"></span> GEO Scanner</a>
-    </div>
-  </header>
-
   <main>
+    <!-- ===== Hero ===== -->
     <section class="hero">
       <div class="container">
         <span class="eyebrow"><span class="pulse"></span> Optimización para buscadores con IA (GEO)</span>
@@ -172,14 +185,20 @@ const jsonLd = {
           Perplexity, Gemini y Google AI — con un puntaje claro y qué mejorar, sin tecnicismos.
         </p>
 
-        <div class="scan-card card">
-          <ScanForm revealFlow={REVEAL_FLOW} />
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="/scan">
+            Escanear mi sitio gratis
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+          <a class="btn btn-ghost" href="#how">Ver cómo funciona</a>
         </div>
 
         <ul class="trust">
           <li class="chk">✓ Gratis</li>
           <li class="sep">·</li>
           <li class="chk">✓ En segundos</li>
+          <li class="sep">·</li>
+          <li class="chk">✓ Sin instalar nada</li>
           <li class="sep">·</li>
           <li class="engines">
             <span class="engine">ChatGPT</span>
@@ -198,17 +217,40 @@ const jsonLd = {
       </div>
     </section>
 
-    <section class="container">
-      <!-- La island renderiza aquí el loading y el resultado -->
-      <div id="scan-output" hidden></div>
+    <!-- ===== Features (Qué es) ===== -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">Qué obtienes</span>
+          <h2>Una auditoría completa en segundos</h2>
+          <p class="sub">Cuatro bloques de análisis que combinados te dicen exactamente qué tan visible eres para las IA.</p>
+        </div>
+
+        <div class="features-grid">
+          {
+            features.map((f) => (
+              <article class="feature card">
+                <span class="feature-ico" aria-hidden="true">{f.icon}</span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </article>
+            ))
+          }
+        </div>
+
+        <div class="section-cta">
+          <a class="btn btn-primary" href="/scan">Empezar mi diagnóstico</a>
+        </div>
+      </div>
     </section>
 
-    <!-- Muestra estática de cómo se ve el informe (preview, no es un resultado real) -->
-    <section class="section">
+    <!-- ===== Mockup preview del informe ===== -->
+    <section class="section section-alt">
       <div class="container">
-        <div class="preview-head section-center">
-          <h2>Así se ve tu informe</h2>
-          <p class="sub">Un puntaje claro y recomendaciones en lenguaje de negocio. Esto es un ejemplo.</p>
+        <div class="section-head">
+          <span class="section-kicker">Así se ve</span>
+          <h2>Tu informe, en una sola pantalla</h2>
+          <p class="sub">Un puntaje claro, las dimensiones evaluadas y un plan de acción concreto. Esto es un ejemplo.</p>
         </div>
 
         <div class="preview-card card" aria-hidden="true">
@@ -258,15 +300,19 @@ const jsonLd = {
       </div>
     </section>
 
-    <section class="section section-center">
+    <!-- ===== Cómo funciona ===== -->
+    <section class="section" id="how">
       <div class="container">
-        <h2>Cómo funciona</h2>
-        <p class="sub">En tres pasos simples obtienes un diagnóstico claro de tu visibilidad ante las IA.</p>
+        <div class="section-head">
+          <span class="section-kicker">Cómo funciona</span>
+          <h2>Tres pasos, sin instalar nada</h2>
+          <p class="sub">De tu URL al diagnóstico completo en menos de un minuto.</p>
+        </div>
         <div class="steps">
           <article class="step card">
             <span class="num">1</span>
             <h3>Pega tu dirección</h3>
-            <p>Escribe la web de tu negocio. No necesitas instalar ni configurar nada.</p>
+            <p>Escribe la web de tu negocio. Verificás que sos humano con un click y arrancamos.</p>
           </article>
           <article class="step card">
             <span class="num">2</span>
@@ -282,11 +328,13 @@ const jsonLd = {
       </div>
     </section>
 
-    <section class="section">
+    <!-- ===== Para quién es ===== -->
+    <section class="section section-alt" id="industries">
       <div class="container">
-        <div class="section-center">
-          <h2>Para quién es</h2>
-          <p class="sub">El GEO ayuda a cualquier negocio que quiera que las IA lo entiendan y lo recomienden. Algunos ejemplos:</p>
+        <div class="section-head">
+          <span class="section-kicker">Para quién es</span>
+          <h2>Cualquier negocio que quiera ser recomendado por las IA</h2>
+          <p class="sub">Algunos ejemplos de quién se beneficia hoy de aparecer en respuestas de IA.</p>
         </div>
         <div class="industries">
           {
@@ -302,9 +350,11 @@ const jsonLd = {
       </div>
     </section>
 
-    <section class="section">
+    <!-- ===== Metodología ===== -->
+    <section class="section" id="method">
       <div class="container">
-        <div class="section-center">
+        <div class="section-head">
+          <span class="section-kicker">Metodología</span>
           <h2>Cómo calculamos tu puntaje</h2>
           <p class="sub">
             Sin caja negra. Tu puntaje de 0 a 100 combina dos partes: un análisis técnico
@@ -358,9 +408,11 @@ const jsonLd = {
       </div>
     </section>
 
-    <section class="section">
+    <!-- ===== FAQ ===== -->
+    <section class="section section-alt" id="faq">
       <div class="container">
-        <div class="section-center">
+        <div class="section-head">
+          <span class="section-kicker">FAQ</span>
           <h2>Preguntas frecuentes</h2>
           <p class="sub">Lo que la gente suele preguntar sobre GEO y esta herramienta.</p>
         </div>
@@ -374,22 +426,15 @@ const jsonLd = {
             ))
           }
         </div>
+
+        <div class="section-cta">
+          <p class="cta-line">¿Listo para ver cómo te ven las IA?</p>
+          <a class="btn btn-primary btn-lg" href="/scan">
+            Empezar mi diagnóstico gratis
+            <span class="arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
       </div>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <p>
-        GEO Scanner · una herramienta de <a href={AUTHOR_URL}>lukasibanez.dev</a> ·
-        <a href={GITHUB_URL}>GitHub</a><br />
-        Hecho en Chile 🇨🇱 para negocios de habla hispana en Latinoamérica y España.
-      </p>
-    </div>
-  </footer>
-
-  <script>
-    import { initScanner } from '../scripts/scanner-island';
-    initScanner();
-  </script>
 </Base>

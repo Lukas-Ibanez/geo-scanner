@@ -1,12 +1,14 @@
 // POST /api/scan — endpoint HTTP delgado sobre buildScan (src/lib/scanFlow.ts).
-// Hace: parseo del body, llamada a buildScan, guardado del lead, proyección
-// al cliente (gating), envío del informe por correo, y serialización JSON.
+// Hace: parseo del body, validación anti-bot (Turnstile), llamada a buildScan,
+// guardado del lead, proyección al cliente (gating), envío del informe por
+// correo, y serialización JSON.
 import type { APIRoute } from 'astro';
 import { buildScan, ScanError } from '../../lib/scanFlow';
 import { accessLevel, projectForClient } from '../../lib/entitlement';
 import { getCachedScan } from '../../lib/cache';
 import { saveLead } from '../../lib/leads';
 import { sendReportEmail } from '../../lib/email';
+import { verifyTurnstile } from '../../lib/turnstile';
 
 export const prerender = false;
 
@@ -27,6 +29,7 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       email?: unknown;
       passphrase?: unknown;
       competitors?: unknown;
+      'cf-turnstile-response'?: unknown;
     };
     try {
       payload = await request.json();
@@ -34,9 +37,23 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       return json({ error: 'No pudimos leer los datos enviados.' }, 400);
     }
 
-    // 2) Construir el flujo (valida, rate-limita, fetcha, evalúa, detailed).
+    // 2) Validación anti-bot (Turnstile). Si TURNSTILE_SECRET no está
+    //    configurado, verifyTurnstile hace bypass con un warning.
     const ip =
       request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
+    const turn = await verifyTurnstile(
+      env.TURNSTILE_SECRET,
+      payload?.['cf-turnstile-response'],
+      ip
+    );
+    if (!turn.success) {
+      return json(
+        { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
+        403
+      );
+    }
+
+    // 3) Construir el flujo (valida, rate-limita, fetcha, evalúa, detailed).
     const passphrase =
       typeof payload?.passphrase === 'string' ? payload.passphrase : null;
     const competitors = Array.isArray(payload?.competitors)

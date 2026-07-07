@@ -1,0 +1,163 @@
+---
+import Base from '../layouts/Base.astro';
+import ScanForm from '../components/ScanForm.astro';
+import Turnstile from '../components/Turnstile.astro';
+
+// /scan — página dedicada de escaneo. Aquí vive el form, el widget de Turnstile
+// y el resultado. Cuando el usuario submitea, el resultado se renderiza inline
+// (más abajo) con scroll automático.
+export const prerender = true;
+
+const SITE = 'https://geo.lukasibanez.dev';
+const AUTHOR_URL = 'https://lukasibanez.dev';
+const GITHUB_URL = 'https://github.com/Lukas-Ibanez';
+
+// Site key de Turnstile — en prod viene de wrangler.toml [vars] TURNSTILE_SITE_KEY.
+// Si no está configurada, el componente usa la test key (que siempre pasa en dev).
+const siteKey = import.meta.env.TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+
+// Qué incluye el informe (entregable real)
+const includes = [
+  {
+    title: 'Puntaje 0 a 100',
+    body: 'Una nota clara y reproducible, con banda de color para ubicarte de un vistazo.',
+  },
+  {
+    title: 'Cinco subpuntajes',
+    body: 'Preparación técnica, claridad de negocio, citabilidad, autoridad y zona geográfica.',
+  },
+  {
+    title: 'Recomendaciones accionables',
+    body: 'Plan ordenado por impacto, en lenguaje de negocio. Lo entiende el dueño, no solo el dev.',
+  },
+  {
+    title: 'Veredicto honesto',
+    body: 'Una lectura clara de qué tan listo está tu sitio para que las IA lo recomienden.',
+  },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  '@id': `${SITE}/scan`,
+  url: `${SITE}/scan`,
+  name: 'Escanear mi sitio — GEO Scanner',
+  description:
+    'Escanea tu sitio web gratis y obtén un puntaje claro de visibilidad en ChatGPT, Perplexity, Gemini y Google AI, con recomendaciones en lenguaje de negocio.',
+  isPartOf: { '@id': `${SITE}/#webapp` },
+  inLanguage: 'es-CL',
+};
+---
+
+<Base
+  active="scan"
+  title="Escanear mi sitio — GEO Scanner"
+  description="Pega la URL de tu sitio y obtené en segundos un puntaje claro de visibilidad en ChatGPT, Perplexity, Gemini y Google AI, con recomendaciones para mejorar."
+>
+  <script type="application/ld+json" slot="head" set:html={JSON.stringify(jsonLd)} />
+
+  <main class="scan-page">
+    <!-- ===== Header de la página ===== -->
+    <section class="scan-header">
+      <div class="container">
+        <a class="back-link" href="/">
+          <span aria-hidden="true">←</span> Volver al inicio
+        </a>
+        <h1>Escanea tu sitio</h1>
+        <p class="scan-sub">
+          Pegá la dirección de tu sitio y en segundos obtenés un puntaje claro de
+          visibilidad en las IA — con recomendaciones concretas para mejorar.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===== Form ===== -->
+    <section class="scan-form-section" id="scan-form">
+      <div class="container scan-form-container">
+        <div class="scan-form-card card">
+          <span class="scan-form-badge">Gratis · sin cuenta</span>
+          <ScanForm revealFlow="two-step" />
+          <Turnstile siteKey={siteKey} />
+        </div>
+
+        <aside class="scan-aside">
+          <h3>Qué vas a obtener</h3>
+          <ul class="scan-includes">
+            {
+              includes.map((it) => (
+                <li>
+                  <span class="scan-check" aria-hidden="true">✓</span>
+                  <div>
+                    <strong>{it.title}</strong>
+                    <p>{it.body}</p>
+                  </div>
+                </li>
+              ))
+            }
+          </ul>
+
+          <div class="scan-trust">
+            <p>
+              <strong>Protegido contra bots</strong> con Cloudflare Turnstile.
+              Verificamos que seas humano para no malgastar tu cuota.
+            </p>
+            <p class="scan-byline">
+              Hecho por <a href={AUTHOR_URL} rel="author">Lukas Ibáñez</a> · código en <a href={GITHUB_URL} rel="me">GitHub</a>.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== Output: loading + resultado ===== -->
+    <section class="scan-output-section" id="scan-output-section">
+      <div class="container">
+        <div id="scan-output" hidden></div>
+      </div>
+    </section>
+
+    <!-- ===== Mini-FAQ ===== -->
+    <section class="scan-faq">
+      <div class="container">
+        <h2>Preguntas frecuentes</h2>
+        <div class="faq scan-faq-grid">
+          <details class="faq-item">
+            <summary>¿Por qué me piden verificar que soy humano?</summary>
+            <p>
+              Para proteger la herramienta del abuso automatizado y no quemar la cuota
+              de IA con scans de bots. Es un solo click y se resuelve en menos de un
+              segundo.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Cuánto tarda el escaneo?</summary>
+            <p>
+              Entre 10 y 30 segundos, según el tamaño del sitio. La página te muestra
+              el progreso en vivo para que sepas qué estamos haciendo.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Puedo escanear cualquier sitio?</summary>
+            <p>
+              Sí, mientras sea un sitio público. No aceptamos direcciones internas,
+              intranets ni hosts privados.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>¿Mis datos quedan guardados?</summary>
+            <p>
+              Guardamos el correo y la URL escaneada para enviarte el informe y,
+              opcionalmente, ayudarte a implementar las mejoras. No compartimos ni
+              vendemos tu información.
+            </p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    import { initScanner } from '../scripts/scanner-island';
+    initScanner();
+  </script>
+</Base>

@@ -1,0 +1,106 @@
+---
+// Header sticky compartido por todas las páginas.
+// Marca a la izquierda, links a anclas (home) o rutas, y CTA destacado a /scan.
+interface Props {
+  /** Página actual (para marcar link activo). */
+  active?: 'home' | 'scan' | 'report' | 'about';
+}
+const { active = 'home' } = Astro.props;
+
+const links: Array<{ id: string; label: string; href: string; target?: '_blank' }> = [
+  { id: 'features', label: 'Qué es', href: '/#features' },
+  { id: 'how', label: 'Cómo funciona', href: '/#how' },
+  { id: 'method', label: 'Metodología', href: '/#method' },
+  { id: 'faq', label: 'FAQ', href: '/#faq' },
+];
+---
+
+<header class="site-nav" data-active={active}>
+  <div class="container site-nav-inner">
+    <a class="brand" href="/">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="brand-text">GEO Scanner</span>
+      <span class="brand-tag">beta</span>
+    </a>
+
+    <nav class="site-nav-links" aria-label="Principal">
+      {
+        links.map((l) => (
+          <a href={l.href} class:list={[{ active: active === 'home' && l.href === '/' }]}>
+            {l.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="site-nav-cta">
+      <a
+        class="btn btn-primary btn-sm"
+        href={Astro.url.pathname === '/scan' ? '#scan-form' : '/scan'}
+      >
+        Escanear gratis
+      </a>
+    </div>
+
+    <button
+      class="site-nav-burger"
+      type="button"
+      aria-label="Abrir menú"
+      aria-expanded="false"
+      aria-controls="site-nav-mobile"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+
+  <div class="site-nav-mobile" id="site-nav-mobile" hidden>
+    {
+      links.map((l) => (
+        <a href={l.href} class="site-nav-mobile-link">
+          {l.label}
+        </a>
+      ))
+    }
+    <a class="btn btn-primary btn-block" href="/scan">
+      Escanear gratis
+    </a>
+  </div>
+</header>
+
+<script>
+  // Menú móvil: toggle del burger.
+  const burger = document.querySelector<HTMLButtonElement>('.site-nav-burger');
+  const mobile = document.getElementById('site-nav-mobile');
+  if (burger && mobile) {
+    burger.addEventListener('click', () => {
+      const open = !mobile.hidden;
+      mobile.hidden = open;
+      burger.setAttribute('aria-expanded', String(!open));
+    });
+    // Cierra el menú al navegar.
+    mobile.querySelectorAll('a').forEach((a) => {
+      a.addEventListener('click', () => {
+        mobile.hidden = true;
+        burger.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+
+  // Marca el link activo en función de la URL actual.
+  const nav = document.querySelector<HTMLElement>('.site-nav');
+  if (nav) {
+    const path = window.location.pathname;
+    nav.querySelectorAll<HTMLAnchorElement>('.site-nav-links a').forEach((a) => {
+      try {
+        const u = new URL(a.href);
+        if (u.pathname === path && u.pathname === '/') {
+          a.classList.add('active');
+        }
+      } catch {
+        /* noop */
+      }
+    });
+  }
+</script>
