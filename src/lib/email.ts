@@ -2,7 +2,7 @@
 // El envío es "best-effort": si falla no debe tumbar el escaneo (ya se guardó el lead).
 // El email es un informe MÁS DETALLADO que la vista en pantalla: añade interpretación
 // del puntaje, desglose explicado por dimensión y un diagnóstico técnico punto por punto.
-import type { ScanResult, SubScores, TechnicalCheck } from './types';
+import type { ScanResult, SubScores, TechnicalCheck, DetailedReport, ClientQuestion } from './types';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -75,6 +75,25 @@ function scoreInterpretation(result: ScanResult): string {
   return 'Hoy es muy poco probable que una IA recomiende tu sitio: no logra entender bien qué haces ni para quién. La buena noticia es que casi todo lo que falta es accionable.';
 }
 
+// Color del puntaje para el informe detallado (gris si no hay dato).
+function detailedScoreColor(score: number | null | undefined): string {
+  if (score == null) return '#64708a';
+  if (score >= 70) return '#19a974';
+  if (score >= 45) return '#f5a524';
+  return '#ef4444';
+}
+
+// ¿El informe detallado tiene ALGO útil? Si las 3 secciones degradaron a null,
+// devolvemos un fallback honesto en vez de un email con bloques vacíos.
+function detailedHasContent(rep: DetailedReport): boolean {
+  return !!(
+    (rep.competitors && rep.competitors.length > 0) ||
+    rep.clientComparison ||
+    rep.competitorsSummary ||
+    (rep.clientQuestions && rep.clientQuestions.length > 0)
+  );
+}
+
 // --- Bloques HTML ---
 
 function dimensionBlockHtml(label: string, about: string, val: number): string {
@@ -94,6 +113,170 @@ function dimensionBlockHtml(label: string, about: string, val: number): string {
         <tr><td colspan="2" style="font-size:13px;line-height:1.5;color:#64708a;">${esc(about)}</td></tr>
       </table>
     </td></tr>`;
+}
+
+// --- Bloques del informe detallado (nivel 'detailed') ---
+// Estilo consistente con el resto del correo. Si detailedReport es null, no se
+// llama a esta función (la llamada vive en renderHtml/renderText).
+
+function detailedCompareHtml(rep: DetailedReport): string {
+  const items: Array<{ label: string; isClient: boolean; finalScore: number | null; subScores: SubScores | null; error?: string }> = [];
+
+  if (rep.clientComparison) {
+    items.push({
+      label: 'Tu sitio',
+      isClient: true,
+      finalScore: rep.clientComparison.finalScore,
+      subScores: rep.clientComparison.subScores,
+    });
+  }
+  if (rep.competitors) {
+    for (const c of rep.competitors) {
+      items.push({
+        label: c.error ? `${c.domain} (no se pudo evaluar)` : c.domain,
+        isClient: false,
+        finalScore: c.finalScore,
+        subScores: c.subScores,
+        error: c.error,
+      });
+    }
+  }
+  if (items.length === 0) return '';
+
+  const rows = items
+    .map((e) => {
+      const col = detailedScoreColor(e.finalScore);
+      const subs = e.subScores;
+      const borderColor = e.isClient ? '#dde7ff' : '#e7ecf6';
+      const bg = e.isClient ? 'background:#f4f7ff;' : '';
+      const labelColor = e.isClient ? '#2f4fc7' : '#15203a';
+      const subLine = subs
+        ? `<p style="margin:6px 0 0;font-size:12px;line-height:1.6;color:#64708a;">Técnico <b style="color:#15203a;">${subs.tecnico}</b> · Negocio <b style="color:#15203a;">${subs.claridadNegocio}</b> · Citabilidad <b style="color:#15203a;">${subs.citabilidad}</b> · Autoridad <b style="color:#15203a;">${subs.autoridad}</b> · Geográfica <b style="color:#15203a;">${subs.claridadGeografica}</b></p>`
+        : e.error
+        ? `<p style="margin:6px 0 0;font-size:12px;color:#9a2b2b;">No pudimos leer este sitio (${esc(e.error)}). Inténtalo más tarde.</p>`
+        : '';
+      const scoreText = e.finalScore == null ? '—' : String(e.finalScore);
+      const scoreUnit = e.finalScore == null ? '' : '<span style="font-size:13px;color:#64708a;font-weight:600;"> / 100</span>';
+      return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;border-radius:12px;border:1px solid ${borderColor};${bg}">
+          <tr><td style="padding:12px 14px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size:15px;font-weight:700;color:${labelColor};">${esc(e.label)}</td>
+                <td align="right" style="font-size:18px;font-weight:800;color:${col};">${scoreText}${scoreUnit}</td>
+              </tr>
+            </table>
+            ${subLine}
+          </td></tr>
+        </table>`;
+    })
+    .join('');
+
+  return `
+    <p style="margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">Tu sitio vs. la competencia</p>
+    <p style="margin:0 0 14px;font-size:12px;line-height:1.55;color:#64708a;">Cada sitio se evaluó con el mismo método, así que la comparación es justa.</p>
+    ${rows}`;
+}
+
+function detailedQuestionsHtml(questions: ClientQuestion[]): string {
+  if (!questions.length) return '';
+  const items = questions
+    .map((q) => {
+      const tagColor = q.cubierta ? '#0f7a55' : '#c0392b';
+      const tagText = q.cubierta ? '✓ CUBIERTA' : '✗ FALTA';
+      return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;border-radius:12px;border:1px solid #e7ecf6;">
+          <tr><td style="padding:12px 16px;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:${tagColor};">${tagText}</p>
+            <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#15203a;line-height:1.4;">${esc(q.pregunta)}</p>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#64708a;">${esc(q.nota)}</p>
+          </td></tr>
+        </table>`;
+    })
+    .join('');
+  return `
+    <p style="margin:18px 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">Preguntas que un cliente le haría a una IA</p>
+    <p style="margin:0 0 14px;font-size:12px;line-height:1.55;color:#64708a;">Preguntas reales del rubro. Te decimos si tu sitio tiene contenido para que una IA te cite como respuesta.</p>
+    ${items}`;
+}
+
+function detailedSummaryHtml(summary: string): string {
+  return `
+    <p style="margin:18px 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">Síntesis</p>
+    <p style="margin:0 0 4px;font-size:14px;line-height:1.55;color:#15203a;background:#eef3ff;padding:14px 16px;border-radius:14px;">${esc(summary)}</p>`;
+}
+
+function detailedEmailHtml(rep: DetailedReport): string {
+  if (!detailedHasContent(rep)) {
+    return `
+      <tr><td style="padding:28px 28px 4px;">
+        <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#3b63ec;">INFORME DETALLADO</p>
+        <p style="margin:6px 0 0;font-size:14px;line-height:1.55;color:#64708a;">
+          No pudimos generar las secciones detalladas (comparativa con competidores y preguntas-cliente) en este momento. Inténtalo de nuevo en unos minutos.
+        </p>
+      </td></tr>`;
+  }
+
+  const compareHtml = detailedCompareHtml(rep);
+  const questionsHtml = rep.clientQuestions ? detailedQuestionsHtml(rep.clientQuestions) : '';
+  const summaryHtml = rep.competitorsSummary ? detailedSummaryHtml(rep.competitorsSummary) : '';
+
+  return `
+    <tr><td style="padding:28px 28px 4px;">
+      <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#3b63ec;">INFORME DETALLADO</p>
+      <p style="margin:0 0 18px;font-size:14px;line-height:1.5;color:#64708a;">
+        Análisis extra que el escaneo gratis no hace: tu sitio comparado con la competencia y preguntas reales que un cliente le haría a una IA.
+      </p>
+      ${compareHtml}
+      ${questionsHtml}
+      ${summaryHtml}
+    </td></tr>`;
+}
+
+// Versión texto plano (sigue a la sección "Plan de mejoras").
+function detailedTextLines(rep: DetailedReport): string[] {
+  if (!detailedHasContent(rep)) {
+    return [
+      '',
+      'INFORME DETALLADO',
+      'No pudimos generar las secciones detalladas (comparativa con competidores y preguntas-cliente) en este momento. Inténtalo de nuevo en unos minutos.',
+    ];
+  }
+  const out: string[] = ['', 'INFORME DETALLADO', 'Análisis extra que el escaneo gratis no hace.'];
+
+  if (rep.competitors || rep.clientComparison) {
+    out.push('', 'TU SITIO VS. LA COMPETENCIA');
+    if (rep.clientComparison) {
+      const c = rep.clientComparison;
+      out.push(`- Tu sitio: ${c.finalScore ?? '—'}/100`);
+      if (c.subScores) {
+        out.push(`  Técnico ${c.subScores.tecnico} · Negocio ${c.subScores.claridadNegocio} · Citabilidad ${c.subScores.citabilidad} · Autoridad ${c.subScores.autoridad} · Geográfica ${c.subScores.claridadGeografica}`);
+      }
+    }
+    if (rep.competitors) {
+      for (const comp of rep.competitors) {
+        const errNote = comp.error ? ` (no se pudo evaluar: ${comp.error})` : '';
+        out.push(`- ${comp.domain}${errNote}: ${comp.finalScore ?? '—'}/100`);
+        if (comp.subScores) {
+          out.push(`  Técnico ${comp.subScores.tecnico} · Negocio ${comp.subScores.claridadNegocio} · Citabilidad ${comp.subScores.citabilidad} · Autoridad ${comp.subScores.autoridad} · Geográfica ${comp.subScores.claridadGeografica}`);
+        }
+      }
+    }
+  }
+
+  if (rep.clientQuestions && rep.clientQuestions.length) {
+    out.push('', 'PREGUNTAS QUE UN CLIENTE LE HARÍA A UNA IA');
+    rep.clientQuestions.forEach((q) => {
+      out.push(`[${q.cubierta ? '✓' : '✗'}] ${q.pregunta}`);
+      out.push(`  ${q.nota}`);
+    });
+  }
+
+  if (rep.competitorsSummary) {
+    out.push('', 'SÍNTESIS');
+    out.push(rep.competitorsSummary);
+  }
+  return out;
 }
 
 function techRowHtml(c: TechnicalCheck): string {
@@ -196,6 +379,8 @@ export function renderHtml(result: ScanResult, ctaUrl: string): string {
             : ''
         }
 
+        ${result.detailedReport ? detailedEmailHtml(result.detailedReport) : ''}
+
         <tr><td style="padding:24px 28px 30px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#3b63ec;border-radius:14px;">
             <tr><td style="padding:24px;text-align:center;">
@@ -251,6 +436,10 @@ function renderText(result: ScanResult, ctaUrl: string): string {
   if (result.recommendations && result.recommendations.length) {
     lines.push('', 'PLAN DE MEJORAS PRIORIZADO (ordenado por impacto)');
     result.recommendations.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+  }
+
+  if (result.detailedReport) {
+    lines.push(...detailedTextLines(result.detailedReport));
   }
 
   lines.push(

@@ -103,7 +103,7 @@ export function initScanner(): void {
 
 async function runScan(
   output: HTMLElement,
-  body: { url: string; email?: string; passphrase?: string },
+  body: { url: string; email?: string; passphrase?: string; competitors?: string[] },
   opts: { unlock?: boolean } = {}
 ): Promise<void> {
   const btn = document.getElementById('scan-btn') as HTMLButtonElement | null;
@@ -386,6 +386,24 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   input.placeholder = 'tucorreo@ejemplo.com';
   form.appendChild(input);
 
+  // Competidores (opcional, 1-3 URLs una por línea). Si los deja vacíos, se
+  // omite del body (no se rompe nada).
+  const compWrap = el('div', 'comp-row');
+  const compLabel = document.createElement('label');
+  compLabel.htmlFor = 'comp-input';
+  compLabel.className = 'comp-label';
+  compLabel.innerHTML = '¿Comparar contra competidores? <span class="comp-hint">(opcional, hasta 3 URLs, una por línea)</span>';
+  compWrap.appendChild(compLabel);
+  const compTextarea = document.createElement('textarea');
+  compTextarea.id = 'comp-input';
+  compTextarea.name = 'competitors';
+  compTextarea.rows = 2;
+  compTextarea.spellcheck = false;
+  compTextarea.autocomplete = 'off';
+  compTextarea.placeholder = 'https://competidor1.com\nhttps://competidor2.com';
+  compWrap.appendChild(compTextarea);
+  form.appendChild(compWrap);
+
   // Toggle para pruebas: si tiene código de acceso, lo ingresa acá y se desbloquea
   // también el informe detallado (sin tocar el flujo normal de "solo email").
   const ppRow = el('div', 'pp-row');
@@ -444,11 +462,19 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     // Pasamos la passphrase SOLO si el toggle está activo y tiene algo — así
     // el flujo normal (sin código) sigue idéntico a como estaba antes.
     const passRaw = (ppInput.value || '').trim();
-    const body: { url: string; email: string; passphrase?: string } = {
-      url: lastUrl,
-      email,
-    };
+    const competitors = (compTextarea.value || '')
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    const body: {
+      url: string;
+      email: string;
+      passphrase?: string;
+      competitors?: string[];
+    } = { url: lastUrl, email };
     if (passRaw) body.passphrase = passRaw;
+    if (competitors.length) body.competitors = competitors;
     await runScan(output, body, { unlock: true });
   });
 

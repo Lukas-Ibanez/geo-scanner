@@ -1082,6 +1082,40 @@ a:hover {
   box-shadow: 0 0 0 4px var(--blue-50);
 }
 
+/* Textarea de competidores (opcional) — vive en el mismo unlock form. */
+.comp-row {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.comp-label {
+  font-size: 0.92rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+.comp-label .comp-hint {
+  font-weight: 400;
+  color: var(--muted);
+}
+#comp-input {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  outline: none;
+  resize: vertical;
+  min-height: 64px;
+  font-family: var(--font);
+}
+#comp-input:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 4px var(--blue-50);
+}
+
 /* Contenedor del informe detallado. */
 .detailed {
   margin-top: 28px;
