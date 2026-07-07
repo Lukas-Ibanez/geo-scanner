@@ -24,14 +24,17 @@ database_id = "1303ab9e-4ab7-47dc-a5df-05a609d3e9db"
 binding = "AI"
 
 # --- Variables (no secretas) ---
-# Proveedor de IA: 'gemini' (activo, más confiable) | 'hybrid' | 'claude' | 'workers-ai'.
+# Proveedor de IA para el ESCANEO BASE (capa gratuita):
+#   'gemini' (activo) | 'hybrid' | 'claude' | 'workers-ai'.
+# NOTA: el informe detallado (nivel 'detailed') usa Claude SIEMPRE — está
+# hardcoded en src/lib/detailed.ts e ignora este switch.
 [vars]
-AI_PROVIDER = "claude"
+AI_PROVIDER = "gemini"
 # Modelo de Gemini: 3.1-flash-lite da 500 req/día gratis (vs 20 de 2.5-flash).
 GEMINI_MODEL = "gemini-3.1-flash-lite"
 # Tope interno de llamadas/día (bajo el límite real de 500 del free tier).
 GEMINI_DAILY_LIMIT = "450"
-# --- Claude (si AI_PROVIDER=claude o el informe detallado; es de pago) ---
+# --- Claude (solo lo usa el informe detallado — es de pago) ---
 # Modelo de Claude para el análisis de contenido: por defecto 'claude-haiku-4-5'.
 # ANTHROPIC_MODEL = "claude-haiku-4-5"
 # Tope interno de llamadas/día a Claude, global a contenido + informe detallado (0 = sin tope).

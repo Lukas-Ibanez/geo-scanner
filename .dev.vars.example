@@ -37,9 +37,11 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # CACHE_TTL_HOURS=6
 # Link de la sección de servicios del portafolio (CTA final)
 # PORTFOLIO_CTA_URL=https://lukasibanez.dev/#servicios
-# Proveedor de IA: 'hybrid' (Gemini + respaldo Workers AI) | 'gemini' | 'claude' | 'workers-ai'
-# (en prod se define en wrangler.toml [vars]; aquí solo para overrides locales)
-# AI_PROVIDER=hybrid
+# Proveedor de IA para el ESCANEO BASE (capa gratuita):
+#   'gemini' (recomendado, default en prod) | 'hybrid' (Gemini + Workers AI fallback) | 'claude' | 'workers-ai'
+# (en prod se define en wrangler.toml [vars]; aquí solo para overrides locales).
+# NOTA: el informe detallado SIEMPRE usa Claude, esto no lo afecta.
+# AI_PROVIDER=gemini
 # Override del modelo de Workers AI
 # WORKERSAI_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast
 # Override del modelo de Claude (default: claude-haiku-4-5)

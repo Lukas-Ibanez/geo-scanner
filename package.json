@@ -15,12 +15,13 @@
     "db:remote": "wrangler d1 execute geo_leads --remote --file=./schema.sql"
   },
   "dependencies": {
-    "astro": "^5.6.0",
-    "@astrojs/cloudflare": "^12.5.0"
+    "@astrojs/cloudflare": "^12.5.0",
+    "astro": "^5.6.0"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@cloudflare/workers-types": "^4.20230914.0",
-    "typescript": "^5.6.0",
+    "typescript": "^5.9.3",
     "wrangler": "^4.0.0"
   }
 }

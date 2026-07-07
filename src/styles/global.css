@@ -1047,3 +1047,161 @@ a:hover {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Informe detallado (nivel 'detailed') ---------- */
+/* Toggle opcional de passphrase en el unlock (probar el nivel paid sin Stripe). */
+.pp-row {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.pp-toggle-label {
+  font-size: 0.92rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.pp-toggle-label:hover {
+  color: var(--blue-600);
+}
+#pp-input {
+  flex: 1 1 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+#pp-input:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 4px var(--blue-50);
+}
+
+/* Contenedor del informe detallado. */
+.detailed {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--line);
+}
+.detailed-intro {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.detailed-section {
+  margin-bottom: 28px;
+}
+.detailed-section .section-title {
+  margin: 0 0 6px;
+}
+.detailed-note {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.detailed-empty {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+}
+
+/* Tabla comparativa cliente vs competidores. */
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0 14px;
+  font-size: 0.92rem;
+}
+.cmp-table thead th {
+  text-align: left;
+  padding: 10px 8px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.cmp-table tbody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.cmp-row-client {
+  background: var(--blue-50);
+}
+.cmp-row-client .cmp-label {
+  color: var(--blue-700);
+  font-weight: 700;
+}
+.cmp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.cmp-summary {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--ink);
+  background: var(--blue-50);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/* Lista de preguntas-cliente. */
+.q-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.q-item {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.q-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+.q-yes {
+  background: #e9f8f1;
+  color: var(--good);
+}
+.q-no {
+  background: #fdecec;
+  color: var(--bad);
+}
+.q-q {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.q-nota {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+

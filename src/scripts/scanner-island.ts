@@ -12,11 +12,40 @@ interface SubScores {
   autoridad: number;
   claridadGeografica: number;
 }
+// Puntaje (final + subpuntajes) — null si no se pudo evaluar.
+interface ScoreSnapshot {
+  finalScore: number | null;
+  subScores: SubScores | null;
+}
+// Un competidor evaluado con el MISMO método que el cliente.
+interface CompetitorComparison {
+  url: string;
+  domain: string;
+  finalScore: number | null;
+  subScores: SubScores | null;
+  error?: string;
+}
+// Pregunta-cliente y si el sitio tiene contenido que la IA pueda citar como respuesta.
+interface ClientQuestion {
+  pregunta: string;
+  cubierta: boolean;
+  nota: string;
+}
+// Informe detallado (nivel 'detailed'): lo que el escaneo gratis no hace.
+// Cada sección puede venir null si degradó; se pinta solo lo que llegó.
+interface DetailedReport {
+  competitors: CompetitorComparison[] | null;
+  competitorsSummary: string | null;
+  clientComparison: ScoreSnapshot | null;
+  clientQuestions: ClientQuestion[] | null;
+  generatedAt: string;
+}
 interface ScanResult {
   url: string;
   domain: string;
   scannedAt: string;
   fromCache: boolean;
+  accessLevel: 'teaser' | 'full' | 'detailed';
   finalScore: number;
   verdict: string;
   subScores: SubScores;
@@ -26,6 +55,7 @@ interface ScanResult {
   technicalSummary: { passed: number; total: number };
   locked: boolean;
   recommendations: string[] | null;
+  detailedReport: DetailedReport | null;
 }
 
 const LOAD_STEPS = [
@@ -73,7 +103,7 @@ export function initScanner(): void {
 
 async function runScan(
   output: HTMLElement,
-  body: { url: string; email?: string },
+  body: { url: string; email?: string; passphrase?: string },
   opts: { unlock?: boolean } = {}
 ): Promise<void> {
   const btn = document.getElementById('scan-btn') as HTMLButtonElement | null;
@@ -305,6 +335,11 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
       recs.appendChild(rec);
     });
     card.appendChild(recs);
+
+    // --- Informe detallado (nivel 'detailed') — solo si la respuesta lo trae ---
+    if (r.accessLevel === 'detailed' && r.detailedReport) {
+      card.appendChild(renderDetailed(r.detailedReport));
+    }
   } else if (r.locked) {
     card.appendChild(renderUnlock(output, r));
   }
@@ -349,11 +384,42 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   input.name = 'email';
   input.autocomplete = 'email';
   input.placeholder = 'tucorreo@ejemplo.com';
+  form.appendChild(input);
+
+  // Toggle para pruebas: si tiene código de acceso, lo ingresa acá y se desbloquea
+  // también el informe detallado (sin tocar el flujo normal de "solo email").
+  const ppRow = el('div', 'pp-row');
+  const ppToggle = document.createElement('input');
+  ppToggle.type = 'checkbox';
+  ppToggle.id = 'pp-toggle';
+  const ppLabel = document.createElement('label');
+  ppLabel.htmlFor = 'pp-toggle';
+  ppLabel.className = 'pp-toggle-label';
+  ppLabel.textContent = 'Tengo código de acceso';
+  ppRow.appendChild(ppToggle);
+  ppRow.appendChild(ppLabel);
+
+  const ppInput = document.createElement('input');
+  ppInput.type = 'text';
+  ppInput.name = 'passphrase';
+  ppInput.id = 'pp-input';
+  ppInput.autocomplete = 'off';
+  ppInput.spellcheck = false;
+  ppInput.placeholder = 'Código de acceso';
+  ppInput.hidden = true;
+  ppRow.appendChild(ppInput);
+
+  ppToggle.addEventListener('change', () => {
+    ppInput.hidden = !ppToggle.checked;
+    if (!ppToggle.checked) ppInput.value = '';
+  });
+
+  form.appendChild(ppRow);
+
   const btn = document.createElement('button');
   btn.type = 'submit';
   btn.className = 'btn btn-primary';
   btn.textContent = 'Enviarme el informe';
-  form.appendChild(input);
   form.appendChild(btn);
 
   const err = el('p', 'form-error');
@@ -375,7 +441,15 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     btn.disabled = true;
     btn.textContent = 'Enviando…';
     lastEmail = email;
-    await runScan(output, { url: lastUrl, email }, { unlock: true });
+    // Pasamos la passphrase SOLO si el toggle está activo y tiene algo — así
+    // el flujo normal (sin código) sigue idéntico a como estaba antes.
+    const passRaw = (ppInput.value || '').trim();
+    const body: { url: string; email: string; passphrase?: string } = {
+      url: lastUrl,
+      email,
+    };
+    if (passRaw) body.passphrase = passRaw;
+    await runScan(output, body, { unlock: true });
   });
 
   return box;
@@ -396,6 +470,173 @@ function renderCta(): HTMLElement {
   box.appendChild(p);
   box.appendChild(a);
   return box;
+}
+
+// --- Informe detallado (nivel 'detailed') — solo llega si el backend lo trae ---
+// Cada subsección degrada por separado: si la comparación falla, igual pintamos
+// las preguntas-cliente (si llegaron) y un fallback honesto si nada llegó.
+function renderDetailed(rep: DetailedReport): HTMLElement {
+  const box = el('div', 'detailed');
+
+  const hasCompetitors =
+    rep.competitors !== null ||
+    rep.competitorsSummary !== null ||
+    rep.clientComparison !== null;
+  const hasQuestions = rep.clientQuestions !== null && rep.clientQuestions.length > 0;
+
+  // Si no llegó NADA del backend, mensaje honesto en vez de secciones vacías.
+  if (!hasCompetitors && !hasQuestions) {
+    const empty = el('p', 'detailed-empty');
+    empty.textContent =
+      'No pudimos generar el informe detallado en este momento. Inténtalo de nuevo en unos minutos.';
+    box.appendChild(empty);
+    return box;
+  }
+
+  // Cabecera: deja claro que esto es ANALISIS EXTRA (más allá del escaneo gratis).
+  const intro = el('p', 'detailed-intro');
+  intro.textContent =
+    'Estas secciones vienen del informe detallado: análisis extra que el escaneo gratis no hace (comparación con competidores y preguntas que un cliente le haría a una IA).';
+  box.appendChild(intro);
+
+  if (hasCompetitors) {
+    box.appendChild(renderComparison(rep));
+  }
+  if (hasQuestions && rep.clientQuestions) {
+    box.appendChild(renderQuestions(rep.clientQuestions));
+  }
+
+  return box;
+}
+
+function scoreCell(value: number | null | undefined): { text: string; color: string } {
+  if (value == null) return { text: '—', color: 'var(--muted)' };
+  if (value >= 70) return { text: String(value), color: 'var(--good)' };
+  if (value >= 45) return { text: String(value), color: 'var(--mid)' };
+  return { text: String(value), color: 'var(--bad)' };
+}
+
+function renderComparison(rep: DetailedReport): HTMLElement {
+  const section = el('section', 'detailed-section');
+
+  const h = el('h3', 'section-title');
+  h.textContent = 'Tu sitio vs. la competencia';
+  section.appendChild(h);
+
+  const cmpNote = el('p', 'detailed-note');
+  cmpNote.textContent =
+    'Cada sitio se evalúa con el mismo método, así que la comparación es justa.';
+  section.appendChild(cmpNote);
+
+  const table = el('table', 'cmp-table');
+
+  // Header
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  headRow.appendChild(thCell('Sitio'));
+  headRow.appendChild(thCell('Puntaje'));
+  headRow.appendChild(thCell('Técnico'));
+  headRow.appendChild(thCell('Negocio'));
+  headRow.appendChild(thCell('Citabilidad'));
+  headRow.appendChild(thCell('Autoridad'));
+  headRow.appendChild(thCell('Geográfica'));
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  // Fila del cliente (la pintamos destacada)
+  if (rep.clientComparison) {
+    const subs = rep.clientComparison.subScores;
+    const row = document.createElement('tr');
+    row.className = 'cmp-row cmp-row-client';
+    row.appendChild(tdCell('Tu sitio', true));
+    const final = scoreCell(rep.clientComparison.finalScore);
+    row.appendChild(tdCell(`${final.text} / 100`, false, final.color, true));
+    row.appendChild(tdCell(subs ? String(subs.tecnico) : '—'));
+    row.appendChild(tdCell(subs ? String(subs.claridadNegocio) : '—'));
+    row.appendChild(tdCell(subs ? String(subs.citabilidad) : '—'));
+    row.appendChild(tdCell(subs ? String(subs.autoridad) : '—'));
+    row.appendChild(tdCell(subs ? String(subs.claridadGeografica) : '—'));
+    table.appendChild(row);
+  }
+
+  // Filas de competidores
+  if (rep.competitors) {
+    for (const c of rep.competitors) {
+      const row = document.createElement('tr');
+      row.className = 'cmp-row';
+      const domainCell = c.error ? `⚠ ${c.domain}` : c.domain;
+      row.appendChild(tdCell(domainCell));
+      const final = scoreCell(c.finalScore);
+      row.appendChild(tdCell(`${final.text} / 100`, false, final.color, true));
+      const sub = c.subScores;
+      row.appendChild(tdCell(sub ? String(sub.tecnico) : '—'));
+      row.appendChild(tdCell(sub ? String(sub.claridadNegocio) : '—'));
+      row.appendChild(tdCell(sub ? String(sub.citabilidad) : '—'));
+      row.appendChild(tdCell(sub ? String(sub.autoridad) : '—'));
+      row.appendChild(tdCell(sub ? String(sub.claridadGeografica) : '—'));
+      table.appendChild(row);
+    }
+  }
+
+  section.appendChild(table);
+
+  if (rep.competitorsSummary) {
+    const prose = el('p', 'cmp-summary');
+    prose.textContent = rep.competitorsSummary;
+    section.appendChild(prose);
+  }
+
+  return section;
+}
+
+function renderQuestions(questions: ClientQuestion[]): HTMLElement {
+  const section = el('section', 'detailed-section');
+  const h = el('h3', 'section-title');
+  h.textContent = 'Preguntas que un cliente le haría a una IA';
+  section.appendChild(h);
+
+  const intro = el('p', 'detailed-note');
+  intro.textContent =
+    'Estas son preguntas reales que alguien en tu rubro le haría a una IA. Te decimos si tu sitio tiene contenido para que la IA te cite como respuesta.';
+  section.appendChild(intro);
+
+  const list = el('ul', 'q-list');
+  for (const q of questions) {
+    const item = el('li', 'q-item');
+    const tag = el('span', q.cubierta ? 'q-tag q-yes' : 'q-tag q-no');
+    tag.textContent = q.cubierta ? 'Cubierta' : 'Falta';
+    item.appendChild(tag);
+    const body = el('div', 'q-body');
+    const p = el('p', 'q-q');
+    p.textContent = q.pregunta;
+    const nota = el('p', 'q-nota');
+    nota.textContent = q.nota;
+    body.appendChild(p);
+    body.appendChild(nota);
+    item.appendChild(body);
+    list.appendChild(item);
+  }
+  section.appendChild(list);
+
+  return section;
+}
+
+function thCell(text: string): HTMLElement {
+  const node = el('th', 'cmp-th');
+  node.textContent = text;
+  return node;
+}
+function tdCell(
+  text: string,
+  isLabel = false,
+  color = 'var(--ink)',
+  bold = false
+): HTMLElement {
+  const node = el('td', isLabel ? 'cmp-td cmp-label' : 'cmp-td');
+  node.textContent = text;
+  if (color !== 'var(--ink)') node.style.color = color;
+  if (bold) node.style.fontWeight = '700';
+  return node;
 }
 
 function showFormError(form: HTMLFormElement, message: string): void {

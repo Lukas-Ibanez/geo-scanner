@@ -17,7 +17,7 @@ interface Env {
 
   // Secrets (inyectados por .dev.vars en local / wrangler secret en prod)
   GEMINI_API_KEY: string;
-  ANTHROPIC_API_KEY: string; // solo necesario si AI_PROVIDER=claude
+  ANTHROPIC_API_KEY: string; // necesario para el informe detallado (Claude) — independiente de AI_PROVIDER
   RESEND_API_KEY?: string; // si falta, el envío del informe se omite silenciosamente
 
   // Opcionales (con defaults en el código)
@@ -31,7 +31,8 @@ interface Env {
   RATE_LIMIT_WHITELIST?: string;
   CACHE_TTL_HOURS?: string;
   PORTFOLIO_CTA_URL?: string;
-  AI_PROVIDER?: string; // 'hybrid' (default) | 'gemini' | 'claude' | 'workers-ai'
+  // Capa gratuita (escaneo base). El detallado SIEMPRE usa Claude — este switch no lo afecta.
+  AI_PROVIDER?: string; // 'gemini' (recomendado) | 'hybrid' | 'claude' | 'workers-ai'
   WORKERSAI_MODEL?: string; // override del modelo de Workers AI
   RESEND_FROM?: string; // remitente verificado en Resend, p.ej. "GEO Scanner <informe@geo.lukasibanez.dev>"
   RESEND_REPLY_TO?: string; // correo de respuesta opcional
