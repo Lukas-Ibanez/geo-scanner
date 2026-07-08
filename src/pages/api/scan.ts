@@ -97,7 +97,14 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
 
     // 5) Email: cuando el lead desbloqueó el detalle y hay recomendaciones.
     if (email && entitled && projected.recommendations && projected.recommendations.length) {
-      const send = sendReportEmail(env, email, projected);
+      // Mandamos passphrase + competitors al sendReportEmail para que pueda
+      // armar el link al reporte PDF (/report) en el cuerpo del correo. Solo
+      // se muestra el link si la passphrase es válida (level==='detailed');
+      // para usuarios 'full' el link queda vacío.
+      const send = sendReportEmail(env, email, projected, {
+        passphrase: typeof passphrase === 'string' ? passphrase : undefined,
+        competitors,
+      });
       const waitUntil = locals.runtime.ctx?.waitUntil?.bind(locals.runtime.ctx);
       if (waitUntil) waitUntil(send);
       else await send;

@@ -10,6 +10,32 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const DEFAULT_CTA_URL = 'https://lukasibanez.dev/#servicios';
 // Remitente por defecto. Debe estar en un dominio verificado en Resend.
 const DEFAULT_FROM = 'GEO Scanner <informe@geo.lukasibanez.dev>';
+// Origen público del sitio (para armar links absolutos al reporte PDF en el
+// correo). Configurable por env; default al dominio de producción.
+const DEFAULT_PUBLIC_URL = 'https://geo.lukasibanez.dev';
+
+// Construye la URL absoluta al reporte PDF (/report?...). Vacía si no hay
+// passphrase (porque /report exige level==='detailed', que solo se alcanza
+// con passphrase válida).
+function buildReportUrl(
+  publicUrl: string,
+  result: ScanResult,
+  passphrase: string,
+  competitors: string[]
+): string {
+  if (!passphrase) return '';
+  const sp = new URLSearchParams();
+  sp.set('url', result.url);
+  if (result.url) {
+    // sacamos el email desde el result si lo tuviéramos; acá no lo tenemos,
+    // así que se omite sin drama — /report solo requiere url + passphrase.
+  }
+  sp.set('passphrase', passphrase);
+  if (competitors.length) sp.set('competitors', competitors.join(','));
+  // Quita slash final del origin si lo tiene.
+  const base = publicUrl.replace(/\/$/, '');
+  return `${base}/report?${sp.toString()}`;
+}
 
 // Qué mide cada dimensión y por qué importa (lenguaje de negocio). Fuente única.
 const DIMENSIONS: Array<{ key: keyof SubScores; label: string; about: string }> = [
@@ -206,7 +232,7 @@ function detailedSummaryHtml(summary: string): string {
     <p style="margin:0 0 4px;font-size:14px;line-height:1.55;color:#15203a;background:#eef3ff;padding:14px 16px;border-radius:14px;">${esc(summary)}</p>`;
 }
 
-function detailedEmailHtml(rep: DetailedReport): string {
+function detailedEmailHtml(rep: DetailedReport, reportUrl: string): string {
   if (!detailedHasContent(rep)) {
     return `
       <tr><td style="padding:28px 28px 4px;">
@@ -214,6 +240,7 @@ function detailedEmailHtml(rep: DetailedReport): string {
         <p style="margin:6px 0 0;font-size:14px;line-height:1.55;color:#64708a;">
           No pudimos generar las secciones detalladas (comparativa con competidores y preguntas-cliente) en este momento. Inténtalo de nuevo en unos minutos.
         </p>
+        ${reportUrl ? detailedPdfCtaHtml(reportUrl) : ''}
       </td></tr>`;
   }
 
@@ -230,7 +257,23 @@ function detailedEmailHtml(rep: DetailedReport): string {
       ${compareHtml}
       ${questionsHtml}
       ${summaryHtml}
+      ${reportUrl ? detailedPdfCtaHtml(reportUrl) : ''}
     </td></tr>`;
+}
+
+// CTA al reporte PDF completo (botón "Ver / Imprimir como PDF"). Solo se
+// muestra si tenemos la URL armada (pasphrase válida → /report accesible).
+function detailedPdfCtaHtml(reportUrl: string): string {
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-radius:14px;border:1px solid #dde7ff;background:#f4f7ff;">
+      <tr><td style="padding:16px 18px;">
+        <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">REPORTE COMPLETO EN PDF</p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#15203a;">
+          Abrí la versión completa, lista para imprimir o guardar como PDF. Incluye el plan priorizado por fases y el desglose técnico.
+        </p>
+        <a href="${esc(reportUrl)}" style="display:inline-block;background:#2f4fc7;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:11px 22px;border-radius:10px;">Ver / Imprimir como PDF</a>
+      </td></tr>
+    </table>`;
 }
 
 // Versión texto plano (sigue a la sección "Plan de mejoras").
@@ -296,7 +339,7 @@ function techRowHtml(c: TechnicalCheck): string {
     </tr>`;
 }
 
-export function renderHtml(result: ScanResult, ctaUrl: string): string {
+export function renderHtml(result: ScanResult, ctaUrl: string, reportUrl: string): string {
   const color = bandColor(result.finalScore);
 
   const dims = DIMENSIONS.filter((d) => d.key === 'tecnico' || result.aiAnalysisAvailable)
@@ -379,7 +422,7 @@ export function renderHtml(result: ScanResult, ctaUrl: string): string {
             : ''
         }
 
-        ${result.detailedReport ? detailedEmailHtml(result.detailedReport) : ''}
+        ${result.detailedReport ? detailedEmailHtml(result.detailedReport, reportUrl) : ''}
 
         <tr><td style="padding:24px 28px 30px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#3b63ec;border-radius:14px;">
@@ -400,7 +443,7 @@ export function renderHtml(result: ScanResult, ctaUrl: string): string {
 </body></html>`;
 }
 
-function renderText(result: ScanResult, ctaUrl: string): string {
+function renderText(result: ScanResult, ctaUrl: string, reportUrl: string): string {
   const lines = [
     `TU INFORME GEO — ${result.domain}`,
     `Puntaje: ${result.finalScore}/100`,
@@ -442,6 +485,10 @@ function renderText(result: ScanResult, ctaUrl: string): string {
     lines.push(...detailedTextLines(result.detailedReport));
   }
 
+  if (reportUrl) {
+    lines.push('', 'REPORTE COMPLETO EN PDF', reportUrl);
+  }
+
   lines.push(
     '',
     '¿Quieres que lo implemente por ti? Hablemos:',
@@ -455,21 +502,36 @@ function renderText(result: ScanResult, ctaUrl: string): string {
 /**
  * Envía el informe completo al correo del lead. Best-effort: devuelve true/false
  * y nunca lanza (los errores se registran). No-op si falta RESEND_API_KEY.
+ *
+ * Si `passphrase` y `competitors` vienen (usuario desbloqueó el detallado),
+ * incluye en el correo un link al reporte PDF completo en /report.
  */
-export async function sendReportEmail(env: Env, to: string, result: ScanResult): Promise<boolean> {
+export async function sendReportEmail(
+  env: Env,
+  to: string,
+  result: ScanResult,
+  opts: { passphrase?: string; competitors?: string[] } = {}
+): Promise<boolean> {
   if (!env.RESEND_API_KEY) {
     console.warn('sendReportEmail: RESEND_API_KEY no configurado, se omite el envío.');
     return false;
   }
   const from = env.RESEND_FROM || DEFAULT_FROM;
   const ctaUrl = env.PORTFOLIO_CTA_URL || DEFAULT_CTA_URL;
+  const publicUrl = env.PUBLIC_URL || DEFAULT_PUBLIC_URL;
+  const reportUrl = buildReportUrl(
+    publicUrl,
+    result,
+    opts.passphrase || '',
+    opts.competitors || []
+  );
 
   const body: Record<string, unknown> = {
     from,
     to: [to],
     subject: `Tu informe GEO: ${result.finalScore}/100 para ${result.domain}`,
-    html: renderHtml(result, ctaUrl),
-    text: renderText(result, ctaUrl),
+    html: renderHtml(result, ctaUrl, reportUrl),
+    text: renderText(result, ctaUrl, reportUrl),
   };
   if (env.RESEND_REPLY_TO) body.reply_to = env.RESEND_REPLY_TO;
 

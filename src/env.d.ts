@@ -37,6 +37,7 @@ interface Env {
   WORKERSAI_MODEL?: string; // override del modelo de Workers AI
   RESEND_FROM?: string; // remitente verificado en Resend, p.ej. "GEO Scanner <informe@geo.lukasibanez.dev>"
   RESEND_REPLY_TO?: string; // correo de respuesta opcional
+  PUBLIC_URL?: string; // URL pública del sitio (para armar links absolutos en emails). Default: https://geo.lukasibanez.dev
 
   // --- Cloudflare Turnstile (protección anti-bot) ---
   // TURNSTILE_SITE_KEY va como variable pública (en wrangler.toml [vars]).
