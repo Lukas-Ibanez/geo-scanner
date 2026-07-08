@@ -895,6 +895,13 @@ a:hover {
   padding: 36px;
   animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Acciones arriba del resultado (botón "Escanear otro sitio"). */
+.result-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 14px;
+}
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -1594,6 +1601,57 @@ a:hover {
   border: 1px dashed var(--line);
   border-radius: var(--radius-sm);
   background: #f9fbff;
+}
+
+/* Input de passphrase con botón ojito para mostrar/ocultar. */
+.pp-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pp-input-wrap input {
+  width: 100%;
+  padding: 13px 48px 13px 15px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fff;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+.pp-input-wrap input:focus {
+  outline: none;
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 4px var(--blue-50);
+}
+.pp-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.pp-eye:hover {
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+.pp-eye svg {
+  display: block;
+}
+.pp-eye.is-showing {
+  color: var(--blue-600);
 }
 
 /* Sección de competidores dentro del detallado. */

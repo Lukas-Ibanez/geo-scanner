@@ -38,20 +38,25 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       return json({ error: 'No pudimos leer los datos enviados.' }, 400);
     }
 
-    // Validación anti-bot (Turnstile). Como el usuario YA pasó por /api/scan
-    // (que validó Turnstile), esto es una capa extra de defensa.
+    // Validación anti-bot (Turnstile). Solo se valida si el cliente lo pide
+    // explícitamente (fase explícita 'scan'). Como este endpoint se invoca
+    // DESPUÉS de un scan base válido, confiamos en esa validación previa y
+    // saltamos Turnstile (lo mismo que en /api/scan con phase='unlock').
     const ip =
       request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
-    const turn = await verifyTurnstile(
-      env.TURNSTILE_SECRET,
-      payload?.['cf-turnstile-response'],
-      ip
-    );
-    if (!turn.success) {
-      return json(
-        { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
-        403
+    const phase = payload?.phase === 'scan' ? 'scan' : 'unlock';
+    if (phase === 'scan') {
+      const turn = await verifyTurnstile(
+        env.TURNSTILE_SECRET,
+        payload?.['cf-turnstile-response'],
+        ip
       );
+      if (!turn.success) {
+        return json(
+          { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
+          403
+        );
+      }
     }
 
     const valid = validateAndNormalize(payload?.url, null);

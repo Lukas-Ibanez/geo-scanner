@@ -101,6 +101,36 @@ function getTurnstileToken(): string | null {
   return input && input.value ? input.value : null;
 }
 
+// --- Helpers de UI: ocultar/mostrar el form principal mientras hay resultado ---
+
+/** id de la sección completa del form (la envolvemos al cargar la página). */
+const SCAN_FORM_SECTION_ID = 'scan-form-anchor';
+
+/** Marca el estado de la página: 'idle' = form visible; 'running' = resultado visible. */
+let scanState: 'idle' | 'running' = 'idle';
+
+function hideScanForm(): void {
+  const section = document.getElementById(SCAN_FORM_SECTION_ID);
+  if (section) section.hidden = true;
+  scanState = 'running';
+}
+
+function showScanForm(): void {
+  const section = document.getElementById(SCAN_FORM_SECTION_ID);
+  if (section) section.hidden = false;
+  // Reinicia el widget de Turnstile (la próxima pasada necesita token nuevo).
+  try {
+    window.turnstile?.reset();
+  } catch {
+    /* noop */
+  }
+  turnstileToken = null;
+  scanState = 'idle';
+  // Pone foco en el input para arrancar el siguiente escaneo rápido.
+  const urlInput = document.getElementById('url') as HTMLInputElement | null;
+  setTimeout(() => urlInput?.focus(), 250);
+}
+
 function setSubmitEnabled(enabled: boolean): void {
   const btn = document.getElementById('scan-btn') as HTMLButtonElement | null;
   if (btn) btn.disabled = !enabled;
@@ -190,15 +220,23 @@ async function runScan(
 ): Promise<void> {
   const btn = document.getElementById('scan-btn') as HTMLButtonElement | null;
   if (btn) btn.disabled = true;
+
+  // UX: cuando arranca el escaneo base, ocultamos el form (ya está fuera de juego)
+  // y dejamos SOLO el output visible. En error, lo volvemos a mostrar.
+  if (!opts.unlock) {
+    hideScanForm();
+  }
+
   // En el paso de desbloqueo NO mostramos la animación de escaneo (confunde: parece
   // que vuelve a escanear). Mantenemos el resultado en pantalla; el botón del
   // formulario ya indica "Enviando…" mientras se procesa.
   const stopLoading = opts.unlock ? () => {} : renderLoading(output);
 
-  // Adjuntamos el token de Turnstile al body (si existe) en el primer submit
-  // del escaneo base. En el unlock, el token ya se consumió; dejamos que Turnstile
-  // maneje re-emisión si la necesita.
-  const fullBody: Record<string, unknown> = { ...body };
+  // Cuerpo del POST: agregamos `phase` para que el backend sepa si tiene que
+  // re-validar Turnstile. La validación pesa en el primer scan (cuesta una
+  // llamada a la API de Cloudflare); en el unlock confiamos en el scan previo.
+  const fullBody: Record<string, unknown> = { ...body, phase: opts.unlock ? 'unlock' : 'scan' };
+  // En el primer scan (NO unlock) adjuntamos el token de Turnstile.
   if (!opts.unlock) {
     const token = getTurnstileToken();
     if (token) fullBody['cf-turnstile-response'] = token;
@@ -221,6 +259,10 @@ async function runScan(
             ? 'No pudimos leer este sitio. Puede estar protegido contra lectores automáticos o no estar disponible en este momento. Prueba con otra página.'
             : 'Algo salió mal. Inténtalo de nuevo en un momento.';
       }
+      // Si el scan base falló, devolvemos el form para que el usuario pueda reintentar.
+      if (!opts.unlock) {
+        showScanForm();
+      }
       // Si el server rechazó Turnstile, reseteamos el widget para que el usuario
       // pueda reintentar sin recargar la página.
       if (res.status === 403) {
@@ -238,6 +280,9 @@ async function runScan(
     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch {
     stopLoading();
+    if (!opts.unlock) {
+      showScanForm();
+    }
     renderError(output, 'No pudimos conectar. Revisa tu conexión e inténtalo de nuevo.');
   } finally {
     if (btn) btn.disabled = false;
@@ -381,6 +426,26 @@ function subscoreRow(label: string, val: number): HTMLElement {
 function renderResult(output: HTMLElement, r: ScanResult): void {
   output.innerHTML = '';
   const card = el('div', 'result-card card');
+
+  // --- Acciones de cabecera: "Escanear otro sitio" ---
+  const topActions = el('div', 'result-actions');
+  const newScan = document.createElement('button');
+  newScan.type = 'button';
+  newScan.className = 'btn btn-ghost btn-sm';
+  newScan.innerHTML =
+    '<span aria-hidden="true">←</span> Escanear otro sitio';
+  newScan.addEventListener('click', () => {
+    output.innerHTML = '';
+    output.hidden = true;
+    showScanForm();
+    // Limpiamos el input de URL para evitar confusion.
+    const urlInput = document.getElementById('url') as HTMLInputElement | null;
+    if (urlInput) urlInput.value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  topActions.appendChild(newScan);
+  card.appendChild(topActions);
+
   const color = band(r.finalScore);
 
   // --- Cabecera: gauge + veredicto ---
@@ -516,15 +581,31 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   const detailedBox = el('div', 'detailed-box');
   detailedBox.hidden = true;
 
-  // Passphrase
+  // Passphrase — input tipo password con ojito para mostrar/ocultar.
+  const ppWrap = el('div', 'pp-input-wrap');
   const ppInput = document.createElement('input');
-  ppInput.type = 'text';
+  ppInput.type = 'password';
   ppInput.name = 'passphrase';
   ppInput.id = 'pp-input';
   ppInput.autocomplete = 'off';
   ppInput.spellcheck = false;
   ppInput.placeholder = 'Código de acceso';
-  detailedBox.appendChild(ppInput);
+  ppWrap.appendChild(ppInput);
+  const ppToggleBtn = document.createElement('button');
+  ppToggleBtn.type = 'button';
+  ppToggleBtn.className = 'pp-eye';
+  ppToggleBtn.setAttribute('aria-label', 'Mostrar u ocultar el código');
+  ppToggleBtn.setAttribute('aria-pressed', 'false');
+  ppToggleBtn.innerHTML =
+    '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  ppToggleBtn.addEventListener('click', () => {
+    const showing = ppInput.type === 'text';
+    ppInput.type = showing ? 'password' : 'text';
+    ppToggleBtn.setAttribute('aria-pressed', String(!showing));
+    ppToggleBtn.classList.toggle('is-showing', !showing);
+  });
+  ppWrap.appendChild(ppToggleBtn);
+  detailedBox.appendChild(ppWrap);
 
   // --- Comparativa con competidores ---
   const compSection = el('div', 'comp-section');

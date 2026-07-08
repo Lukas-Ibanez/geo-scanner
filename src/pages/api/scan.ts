@@ -37,20 +37,25 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       return json({ error: 'No pudimos leer los datos enviados.' }, 400);
     }
 
-    // 2) Validación anti-bot (Turnstile). Si TURNSTILE_SECRET no está
-    //    configurado, verifyTurnstile hace bypass con un warning.
+    // 2) Validación anti-bot (Turnstile). Solo se valida en el primer submit
+    //    del escaneo (phase='scan'). En el unlock (phase='unlock') confiamos
+    //    en el scan previo: el unlock presupone que el primer POST pasó y
+    //    gastó un análisis de IA, así que no vale la pena gastar otro Turnstile.
     const ip =
       request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
-    const turn = await verifyTurnstile(
-      env.TURNSTILE_SECRET,
-      payload?.['cf-turnstile-response'],
-      ip
-    );
-    if (!turn.success) {
-      return json(
-        { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
-        403
+    const phase = payload?.phase === 'unlock' ? 'unlock' : 'scan';
+    if (phase === 'scan') {
+      const turn = await verifyTurnstile(
+        env.TURNSTILE_SECRET,
+        payload?.['cf-turnstile-response'],
+        ip
       );
+      if (!turn.success) {
+        return json(
+          { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
+          403
+        );
+      }
     }
 
     // 3) Construir el flujo (valida, rate-limita, fetcha, evalúa, detailed).
