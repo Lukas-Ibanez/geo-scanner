@@ -52,5 +52,15 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 # --- Cloudflare Turnstile (anti-bot) ---
 # En el dashboard de Cloudflare → Turnstile → agregar sitio, copiar la SECRET key.
 # Si la dejas vacía, el server NO valida el token (modo dev) y la SITE_KEY de
-# prueba (1x00000000000000000000AA en wrangler.toml) siempre pasa.
+# prueba (1x00000000000000000000AA) siempre pasa.
 # TURNSTILE_SECRET=0x4AAAAAAA...
+
+# --- Cloudflare Turnstile (SITE_KEY — pública, build-time) ---
+# Esta se setea como variable de entorno al hacer el build (no va en .dev.vars
+# porque es build-time, no runtime). En PowerShell:
+#   $env:PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAA..."
+#   npm run build
+# En Cloudflare Pages, agregar en Settings → Environment variables.
+# Si no la ponés, el frontend cae a la test key (siempre pasa) y verás el
+# cartelito rojo de "Solo para pruebas".
+# PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAA...

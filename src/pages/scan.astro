@@ -12,9 +12,20 @@ const SITE = 'https://geo.lukasibanez.dev';
 const AUTHOR_URL = 'https://lukasibanez.dev';
 const GITHUB_URL = 'https://github.com/Lukas-Ibanez';
 
-// Site key de Turnstile — en prod viene de wrangler.toml [vars] TURNSTILE_SITE_KEY.
-// Si no está configurada, el componente usa la test key (que siempre pasa en dev).
-const siteKey = import.meta.env.TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+// Site key de Turnstile — es PÚBLICA por diseño (viaja en el HTML del cliente).
+// La SITE_KEY real se inyecta en build-time con la variable de entorno
+// PUBLIC_TURNSTILE_SITE_KEY (Astro expone automáticamente las env vars con
+// prefijo PUBLIC_* a los componentes). En dev cae al fallback (test key
+// de Cloudflare, siempre pasa) para que el flujo se pueda probar sin keys.
+//
+// La SECRET key NO va acá: vive como variable de runtime (TURNSTILE_SECRET,
+// inyectada por Cloudflare Pages en el Worker) y la usa el endpoint
+// /api/scan para validar el token. Ver src/lib/turnstile.ts.
+const DEFAULT_SITE_KEY = '1x00000000000000000000AA';
+const siteKey =
+  import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ||
+  import.meta.env.TURNSTILE_SITE_KEY ||
+  DEFAULT_SITE_KEY;
 
 // Qué incluye el informe (entregable real)
 const includes = [

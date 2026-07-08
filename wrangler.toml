@@ -44,12 +44,20 @@ GEMINI_DAILY_LIMIT = "450"
 # DETAILED_PASSPHRASE NO va aquí: es un secret (ver abajo).
 
 # --- Cloudflare Turnstile (protección anti-bot) ---
-# La SITE_KEY es pública: va aquí. La SECRET va en `wrangler pages secret put TURNSTILE_SECRET`.
-# Para empezar a probar sin sacar keys, podés usar la test key de Cloudflare
-# (1x00000000000000000000AA — siempre pasa; el server la acepta sin chequear
-# mientras no haya TURNSTILE_SECRET configurado).
-# Cuando saques las reales, reemplazá esto Y configurá el secret.
-TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
+# La SITE_KEY se inyecta al BUILD como PUBLIC_TURNSTILE_SITE_KEY (Astro expone
+# las env vars con prefijo PUBLIC_* al frontend prerenderizado). Formas de setearla:
+#   1) En local, exportala antes de `astro build`:
+#        $env:PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAA..."
+#        npm run build
+#   2) En Cloudflare Pages (recomendado para prod): project → Settings →
+#      Environment variables → agregar PUBLIC_TURNSTILE_SITE_KEY con el valor.
+#      Cloudflare la pasa al comando de build automáticamente.
+# Si no la ponés, el frontend cae a la test key `1x00000000000000000000AA`
+# (siempre pasa; sirve para probar end-to-end sin tener keys reales).
+#
+# La SECRET key (clave anti-bot) va como SECRET (no en este archivo):
+#   Local:  .dev.vars
+#   Prod:   wrangler pages secret put TURNSTILE_SECRET
 
 # Secrets (no van aquí):
 #   Local:  .dev.vars
@@ -59,5 +67,5 @@ TURNSTILE_SITE_KEY = "1x00000000000000000000AA"
 #           wrangler pages secret put RESEND_API_KEY
 #           wrangler pages secret put TURNSTILE_SECRET      (clave anti-bot — vacío = modo dev)
 #
-# RESEND_FROM / RESEND_REPLY_TO pueden ir como variables de entorno del proyecto
-# en el panel de Cloudflare Pages, o como secrets si se prefiere.
+# RESEND_FROM / RESEND_REPLY_TO / PUBLIC_TURNSTILE_SITE_KEY pueden ir como
+# variables de entorno del proyecto en el panel de Cloudflare Pages.
