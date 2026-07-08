@@ -604,11 +604,30 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     ppToggleBtn.setAttribute('aria-pressed', String(!showing));
     ppToggleBtn.classList.toggle('is-showing', !showing);
   });
-  ppWrap.appendChild(ppToggleBtn);
+    ppWrap.appendChild(ppToggleBtn);
   detailedBox.appendChild(ppWrap);
 
-  // --- Comparativa con competidores ---
+  // Botón "Validar código" — la validación es EXPLÍCITA: el usuario tipea y
+  // aprieta el botón. Un solo request por intento (no por keystroke), y el
+  // usuario sabe exactamente cuándo se está gastando un check. La sección
+  // de competidores queda oculta hasta que el server confirme que el código
+  // es válido.
+  const validateBtn = document.createElement('button');
+  validateBtn.type = 'button';
+  validateBtn.className = 'btn btn-secondary btn-sm pp-validate-btn';
+  validateBtn.textContent = 'Validar código';
+  detailedBox.appendChild(validateBtn);
+
+  const ppStatus = el('p', 'pp-status');
+  ppStatus.hidden = true;
+  detailedBox.appendChild(ppStatus);
+
+  // --- Comparativa con competidores (detrás del código de acceso) ---
+  // Esta sección está oculta hasta que el usuario tenga el toggle activo Y
+  // haya escrito el código. Sin código, ni siquiera aparece la UI para evitar
+  // gastar el call a /api/suggest-competitors (Claude) por nada.
   const compSection = el('div', 'comp-section');
+  compSection.hidden = true;
   const compTitle = document.createElement('p');
   compTitle.className = 'comp-title';
   compTitle.textContent = 'Comparar contra competidores';
@@ -654,7 +673,77 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     detailedBox.hidden = !ppToggle.checked;
     if (!ppToggle.checked) {
       ppInput.value = '';
-      // No limpiamos sugerencias para que el usuario no pierda trabajo si re-toggla.
+      // Reset de estado de validación al cerrar el toggle.
+      isPassphraseValid = false;
+      updatePpStatus('idle');
+    }
+    updateCompSectionVisibility();
+  });
+
+  // --- Validación server-side de la passphrase (explícita, por botón) ---
+  // La sección de competidores solo se habilita cuando el usuario aprieta
+  // "Validar código" Y el server confirma que coincide con DETAILED_PASSPHRASE.
+  // Un solo request por click. Si después el usuario edita el input, la
+  // sección se vuelve a ocultar hasta que vuelva a validar.
+  let isPassphraseValid = false;
+
+  function updatePpStatus(state: 'idle' | 'ok' | 'bad' | 'err', msg?: string): void {
+    ppStatus.className = 'pp-status pp-status--' + state;
+    ppStatus.textContent = msg || '';
+    ppStatus.hidden = state === 'idle' || !msg;
+  }
+
+  function updateCompSectionVisibility(): void {
+    compSection.hidden = !(ppToggle.checked && isPassphraseValid);
+  }
+
+  // Si el usuario edita el input después de validar, la sección se vuelve a
+  // ocultar y se limpia el status — el código que estaba validado ya no es
+  // el que está en el campo.
+  ppInput.addEventListener('input', () => {
+    if (!isPassphraseValid) return;
+    isPassphraseValid = false;
+    updatePpStatus('idle');
+    updateCompSectionVisibility();
+  });
+
+  // Botón "Validar código" — única forma de pedir la validación al server.
+  validateBtn.addEventListener('click', async () => {
+    const code = ppInput.value.trim();
+    if (!code) {
+      updatePpStatus('bad', 'Escribe tu código primero.');
+      return;
+    }
+    validateBtn.disabled = true;
+    const originalLabel = validateBtn.textContent;
+    validateBtn.textContent = 'Validando…';
+    updatePpStatus('idle');
+    try {
+      const res = await fetch('/api/check-passphrase', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ passphrase: code }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { valid?: boolean; error?: string }
+        | null;
+      if (res.ok && data && data.valid === true) {
+        isPassphraseValid = true;
+        updatePpStatus('ok', 'Código correcto. Ya podés comparar contra competidores.');
+        updateCompSectionVisibility();
+      } else if (res.status === 429) {
+        updatePpStatus('err', data?.error || 'Demasiados intentos. Esperá un momento.');
+      } else {
+        isPassphraseValid = false;
+        updatePpStatus('bad', 'Código incorrecto.');
+        updateCompSectionVisibility();
+      }
+    } catch {
+      updatePpStatus('err', 'No pudimos validar el código. Reintentá.');
+      updateCompSectionVisibility();
+    } finally {
+      validateBtn.disabled = false;
+      validateBtn.textContent = originalLabel;
     }
   });
 
@@ -662,6 +751,13 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   detectBtn.addEventListener('click', async () => {
     if (!lastUrl) {
       renderDetectError(suggestionsList, 'Vuelve a escanear tu sitio antes de detectar competidores.');
+      return;
+    }
+    if (!isPassphraseValid) {
+      renderDetectError(
+        suggestionsList,
+        'Ingresá un código de acceso válido para usar la comparación con competidores.'
+      );
       return;
     }
     detectBtn.disabled = true;
@@ -741,8 +837,14 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     const competitors = Array.from(picked).slice(0, 3);
 
     // Guardamos lo que se mandó al backend para construir luego el link al PDF.
-    lastPassphrase = passRaw;
-    lastCompetitors = competitors;
+    // Solo si la passphrase fue validada — si no, no tiene sentido recordarlos.
+    if (isPassphraseValid) {
+      lastPassphrase = passRaw;
+      lastCompetitors = competitors;
+    } else {
+      lastPassphrase = '';
+      lastCompetitors = [];
+    }
 
     const body: {
       url: string;
@@ -750,8 +852,12 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
       passphrase?: string;
       competitors?: string[];
     } = { url: lastUrl, email };
-    if (passRaw) body.passphrase = passRaw;
-    if (competitors.length) body.competitors = competitors;
+    // Solo mandamos passphrase si el server ya la validó en este formulario.
+    // Sin validación, el server igual la rechazaría, pero no la exponemos.
+    if (passRaw && isPassphraseValid) body.passphrase = passRaw;
+    // Y los competidores solo si la passphrase fue validada — doble seguro
+    // para que el server nunca escanee competidores sin derecho.
+    if (competitors.length && isPassphraseValid) body.competitors = competitors;
     await runScan(output, body, { unlock: true });
   });
 

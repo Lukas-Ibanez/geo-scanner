@@ -1,8 +1,12 @@
 // Rate limiting simple por IP usando Cloudflare KV.
 // KV es eventualmente consistente, así que el conteo es aproximado: suficiente
 // como freno anti-abuso de un lead magnet (no es un limitador estricto).
+//
+// Opcionalmente acepta un `namespace` para tener contadores separados en el
+// mismo KV (ej. "scan" vs "passphrase-check"). Si no se pasa, usa "scan".
 
-const PREFIX = 'rl:';
+const DEFAULT_NAMESPACE = 'scan';
+const GLOBAL_PREFIX = 'rl:';
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -12,9 +16,10 @@ export interface RateLimitResult {
 export async function checkRateLimit(
   kv: KVNamespace,
   ip: string,
-  limitPerHour: number
+  limitPerHour: number,
+  namespace: string = DEFAULT_NAMESPACE
 ): Promise<RateLimitResult> {
-  const key = PREFIX + ip;
+  const key = `${GLOBAL_PREFIX}${namespace}:${ip}`;
   let count = 0;
   try {
     const raw = await kv.get(key);
