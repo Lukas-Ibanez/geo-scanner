@@ -1603,6 +1603,21 @@ a:hover {
   background: #f9fbff;
 }
 
+/* Estado de validación de la passphrase. Aparece debajo del input. */
+.pp-validate-btn {
+  align-self: flex-start;
+  margin-top: -2px;
+}
+.pp-status {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+.pp-status--checking { color: var(--muted); }
+.pp-status--ok       { color: #0a7a3a; font-weight: 600; }
+.pp-status--bad      { color: #b3261e; font-weight: 600; }
+.pp-status--err      { color: #b3261e; }
+
 /* Input de passphrase con botón ojito para mostrar/ocultar. */
 .pp-input-wrap {
   position: relative;
@@ -1763,6 +1778,15 @@ a:hover {
   font-size: 0.85rem;
   color: var(--muted);
   line-height: 1.4;
+  /* Forzar a la columna 1fr (la del texto) en vez de caer en la de 18px
+     del checkbox, que es lo que hacía que cada palabra se rompiera en una
+     línea propia. */
+  grid-column: 2;
+  min-width: 0;
+}
+.comp-chip-text {
+  grid-column: 2;
+  min-width: 0;
 }
 .comp-empty {
   margin: 0;
