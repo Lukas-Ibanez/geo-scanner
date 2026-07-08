@@ -100,3 +100,41 @@ export async function fetchSite(origin: string, url: string): Promise<FetchedSit
     sitemapExists: sitemap.ok && sitemap.text.trim().length > 0,
   };
 }
+
+// Probe rápido de alcanzabilidad para filtrar sugerencias de competidores.
+// Mucho más liviano que fetchSite (no descarga robots/llms/sitemap ni HTML
+// completo): solo intenta un HEAD/GET corto al homepage. Devuelve true si el
+// sitio responde con cualquier 2xx/3xx dentro del timeout — eso alcanza para
+// confirmar que existe y no nos va a salir "no-alcanzable" en el reporte.
+const PROBE_TIMEOUT_MS = 4000;
+
+export async function probeReachable(origin: string): Promise<boolean> {
+  // Algunos servidores rechazan HEAD (405) o devuelven falsos 5xx; caemos a
+  // GET con el mismo timeout si la primera intentona falla por red/HTTP.
+  for (const method of ['HEAD', 'GET'] as const) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+    try {
+      const res = await fetch(origin, {
+        method,
+        redirect: 'follow',
+        signal: controller.signal,
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+        },
+      });
+      // 2xx (ok) y 3xx (redirects que ya seguimos) cuentan como alcanzable.
+      // 4xx/5xx -> probamos con el otro método antes de rendirnos.
+      if (res.ok || (res.status >= 300 && res.status < 400)) return true;
+      if (res.status >= 400 && res.status < 500) return false;
+      // 5xx -> probá el otro método.
+    } catch {
+      // Timeout / DNS / conexión rechazada -> probá el otro método.
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return false;
+}

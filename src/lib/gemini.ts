@@ -118,3 +118,102 @@ export async function evaluateWithGemini(signals: SiteSignals, env: Env): Promis
 
   return degraded(lastReason);
 }
+
+// --- Primitiva genérica de tool/structured output ---
+// Mismo rol que callClaudeTool en claude.ts: el caller pasa un responseSchema
+// (subconjunto OpenAPI de Gemini) y recibe el JSON parseado tipado como T, o
+// null ante cualquier fallo. Reusa withinDailyBudget + retries + timeout.
+// Pensada para tareas que NO son la evaluación de contenido estándar (ej.
+// sugerencia de competidores), donde el schema es distinto y el call site
+// necesita control total de la forma del output.
+export interface CallGeminiToolArgs {
+  system: string;
+  userPrompt: string;
+  responseSchema: object; // subconjunto OpenAPI 3.0 que Gemini acepta en responseSchema
+  env: Env;
+  model?: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+}
+
+export async function callGeminiTool<T>(args: CallGeminiToolArgs): Promise<T | null> {
+  const apiKey = args.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn('callGeminiTool sin GEMINI_API_KEY');
+    return null;
+  }
+
+  const parsedLimit = parseInt(args.env.GEMINI_DAILY_LIMIT ?? '', 10);
+  const dailyLimit = Number.isFinite(parsedLimit) ? parsedLimit : 200;
+  if (!(await withinDailyBudget(args.env.SCAN_CACHE, dailyLimit))) {
+    console.warn('callGeminiTool tope diario alcanzado');
+    return null;
+  }
+
+  const model = args.model || args.env.GEMINI_MODEL || DEFAULT_MODEL;
+
+  const body: Record<string, unknown> = {
+    systemInstruction: { parts: [{ text: args.system }] },
+    contents: [{ role: 'user', parts: [{ text: args.userPrompt }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: args.responseSchema,
+      temperature: args.temperature ?? 0,
+      topP: 1,
+      topK: 1,
+      seed: 42,
+      maxOutputTokens: args.maxOutputTokens ?? 1024,
+      // Mismo criterio que evaluateWithGemini.
+      ...(model.startsWith('gemini-2') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+    },
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const TRANSIENT = new Set([429, 500, 502, 503, 504]);
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  let lastReason = 'unknown';
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          lastReason = 'no-text:' + (data?.candidates?.[0]?.finishReason ?? '?');
+        } else {
+          try {
+            return JSON.parse(text) as T;
+          } catch (e) {
+            lastReason = 'parse:' + (e instanceof Error ? e.message : String(e));
+          }
+        }
+      } else {
+        const errText = await res.text().catch(() => '');
+        lastReason = 'http-' + res.status + ':' + errText.slice(0, 160);
+        if (!TRANSIENT.has(res.status)) {
+          console.warn(`callGeminiTool fallo no transitorio: ${lastReason}`);
+          clearTimeout(timer);
+          return null;
+        }
+      }
+    } catch (err) {
+      lastReason = 'exception:' + (err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (attempt < MAX_ATTEMPTS) await sleep(600 * attempt);
+  }
+
+  console.warn(`callGeminiTool fallo tras ${MAX_ATTEMPTS} intentos: ${lastReason}`);
+  return null;
+}
