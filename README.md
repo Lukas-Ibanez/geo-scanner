@@ -1,4 +1,4 @@
-# GEO Scanner
+# GEO Scanner 
 
 Herramienta web gratuita que escanea cualquier sitio y evalúa qué tan preparado está para
 aparecer en **motores de búsqueda generativos** (ChatGPT, Perplexity, Google AI Overviews,
