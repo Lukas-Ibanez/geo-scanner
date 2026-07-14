@@ -157,7 +157,7 @@ function dimensionBlockHtml(label: string, about: string, val: number): string {
 // llama a esta función (la llamada vive en renderHtml/renderText).
 
 function detailedCompareHtml(rep: DetailedReport): string {
-  const items: Array<{ label: string; isClient: boolean; finalScore: number | null; subScores: SubScores | null; error?: string }> = [];
+  const items: Array<{ label: string; isClient: boolean; finalScore: number | null; subScores: SubScores | null; aiAvailable?: boolean; error?: string }> = [];
 
   if (rep.clientComparison) {
     items.push({
@@ -165,6 +165,7 @@ function detailedCompareHtml(rep: DetailedReport): string {
       isClient: true,
       finalScore: rep.clientComparison.finalScore,
       subScores: rep.clientComparison.subScores,
+      aiAvailable: rep.clientComparison.aiAvailable,
     });
   }
   if (rep.competitors) {
@@ -174,6 +175,7 @@ function detailedCompareHtml(rep: DetailedReport): string {
         isClient: false,
         finalScore: c.finalScore,
         subScores: c.subScores,
+        aiAvailable: c.aiAvailable,
         error: c.error,
       });
     }
@@ -187,8 +189,11 @@ function detailedCompareHtml(rep: DetailedReport): string {
       const borderColor = e.isClient ? '#dde7ff' : '#e7ecf6';
       const bg = e.isClient ? 'background:#f4f7ff;' : '';
       const labelColor = e.isClient ? '#2f4fc7' : '#15203a';
+      // "—" en las dimensiones de contenido si la IA no pudo evaluar ese sitio
+      // (un 0 de relleno parece un puntaje real y confunde).
+      const dim = (v: number) => (e.aiAvailable === false ? '—' : String(v));
       const subLine = subs
-        ? `<p style="margin:6px 0 0;font-size:12px;line-height:1.6;color:#64708a;">Técnico <b style="color:#15203a;">${subs.tecnico}</b> · Negocio <b style="color:#15203a;">${subs.claridadNegocio}</b> · Citabilidad <b style="color:#15203a;">${subs.citabilidad}</b> · Autoridad <b style="color:#15203a;">${subs.autoridad}</b> · Geográfica <b style="color:#15203a;">${subs.claridadGeografica}</b></p>`
+        ? `<p style="margin:6px 0 0;font-size:12px;line-height:1.6;color:#64708a;">Técnico <b style="color:#15203a;">${subs.tecnico}</b> · Negocio <b style="color:#15203a;">${dim(subs.claridadNegocio)}</b> · Citabilidad <b style="color:#15203a;">${dim(subs.citabilidad)}</b> · Autoridad <b style="color:#15203a;">${dim(subs.autoridad)}</b> · Geográfica <b style="color:#15203a;">${dim(subs.claridadGeografica)}</b></p>`
         : e.error
         ? `<p style="margin:6px 0 0;font-size:12px;color:#9a2b2b;">No pudimos leer este sitio (${esc(e.error)}). Inténtalo más tarde.</p>`
         : '';
@@ -339,7 +344,7 @@ function detailedPdfCtaHtml(reportUrl: string): string {
       <tr><td style="padding:16px 18px;">
         <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">REPORTE COMPLETO EN PDF</p>
         <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#15203a;">
-          Abrí la versión completa, lista para imprimir o guardar como PDF. Incluye el plan priorizado por fases y el desglose técnico.
+          Abre la versión completa, lista para imprimir o guardar como PDF. Incluye el plan de acción priorizado y el desglose técnico.
         </p>
         <a href="${esc(reportUrl)}" style="display:inline-block;background:#2f4fc7;color:#ffffff;font-weight:700;font-size:14px;text-decoration:none;padding:11px 22px;border-radius:10px;">Ver / Imprimir como PDF</a>
       </td></tr>
@@ -373,20 +378,20 @@ function detailedTextLines(rep: DetailedReport): string[] {
 
   if (rep.competitors || rep.clientComparison) {
     out.push('', 'TU SITIO VS. LA COMPETENCIA');
+    const subLine = (s: SubScores, aiAvailable?: boolean): string => {
+      const dim = (v: number) => (aiAvailable === false ? '—' : String(v));
+      return `  Técnico ${s.tecnico} · Negocio ${dim(s.claridadNegocio)} · Citabilidad ${dim(s.citabilidad)} · Autoridad ${dim(s.autoridad)} · Geográfica ${dim(s.claridadGeografica)}`;
+    };
     if (rep.clientComparison) {
       const c = rep.clientComparison;
       out.push(`- Tu sitio: ${c.finalScore ?? '—'}/100`);
-      if (c.subScores) {
-        out.push(`  Técnico ${c.subScores.tecnico} · Negocio ${c.subScores.claridadNegocio} · Citabilidad ${c.subScores.citabilidad} · Autoridad ${c.subScores.autoridad} · Geográfica ${c.subScores.claridadGeografica}`);
-      }
+      if (c.subScores) out.push(subLine(c.subScores, c.aiAvailable));
     }
     if (rep.competitors) {
       for (const comp of rep.competitors) {
         const errNote = comp.error ? ` (no se pudo evaluar: ${comp.error})` : '';
         out.push(`- ${comp.domain}${errNote}: ${comp.finalScore ?? '—'}/100`);
-        if (comp.subScores) {
-          out.push(`  Técnico ${comp.subScores.tecnico} · Negocio ${comp.subScores.claridadNegocio} · Citabilidad ${comp.subScores.citabilidad} · Autoridad ${comp.subScores.autoridad} · Geográfica ${comp.subScores.claridadGeografica}`);
-        }
+        if (comp.subScores) out.push(subLine(comp.subScores, comp.aiAvailable));
       }
     }
   }

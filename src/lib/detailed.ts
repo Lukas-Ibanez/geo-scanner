@@ -115,7 +115,7 @@ async function evaluateClient(args: BuildDetailedReportArgs): Promise<ClientEval
   const tech = computeTechnical(args.signals, args.site);
   const content = await evaluateWithClaude(args.signals, args.env);
   const { finalScore, subScores } = combineScores(tech, content);
-  return { snapshot: { finalScore, subScores }, tech, content };
+  return { snapshot: { finalScore, subScores, aiAvailable: content.available }, tech, content };
 }
 
 // --- Núcleo premium (sección 0 del informe detallado) ---
@@ -438,7 +438,13 @@ async function scoreCompetitor(target: CompetitorTarget, env: Env): Promise<Scor
   const content = await evaluateWithClaude(signals, env);
   const { finalScore, subScores } = combineScores(tech, content);
   return {
-    comparison: { url: target.url, domain: target.domain, finalScore, subScores },
+    comparison: {
+      url: target.url,
+      domain: target.domain,
+      finalScore,
+      subScores,
+      aiAvailable: content.available,
+    },
     profile: profileOf(target.domain, signals),
   };
 }
@@ -478,7 +484,10 @@ const COMPARISON_INPUT_SCHEMA = {
   required: ['sintesis', 'insights'],
 };
 
-function describeSub(s: SubScores): string {
+function describeSub(s: SubScores, aiAvailable?: boolean): string {
+  if (aiAvailable === false) {
+    return `preparación técnica ${s.tecnico} (el contenido no se pudo evaluar: solo puntaje técnico)`;
+  }
   return `preparación técnica ${s.tecnico}, claridad del negocio ${s.claridadNegocio}, facilidad para ser citado ${s.citabilidad}, autoridad ${s.autoridad}, claridad geográfica ${s.claridadGeografica}`;
 }
 
@@ -500,7 +509,7 @@ async function synthesizeComparison(
   // Puntaje del cliente medido con el MISMO evaluador que los competidores (no el titular de Gemini).
   const clientLine =
     client && client.finalScore != null && client.subScores
-      ? `Cliente "${clientTitle}" — puntaje ${client.finalScore}/100; subpuntajes: ${describeSub(client.subScores)}; ${describeProfile(clientProfile)}.`
+      ? `Cliente "${clientTitle}" — puntaje ${client.finalScore}/100; subpuntajes: ${describeSub(client.subScores, client.aiAvailable)}; ${describeProfile(clientProfile)}.`
       : `Cliente "${clientTitle}" — no se pudo evaluar con el mismo método; ${describeProfile(clientProfile)}.`;
   const byDomain = new Map(profiles.map((p) => [p.domain, p]));
   const lines: string[] = [
@@ -509,7 +518,7 @@ async function synthesizeComparison(
     ...competitors.map((c) => {
       if (c.finalScore == null || !c.subScores) return `- ${c.domain}: no se pudo evaluar.`;
       const p = byDomain.get(c.domain);
-      return `- ${c.domain}: puntaje ${c.finalScore}/100; subpuntajes: ${describeSub(c.subScores)}${p ? `; ${describeProfile(p)}` : ''}.`;
+      return `- ${c.domain}: puntaje ${c.finalScore}/100; subpuntajes: ${describeSub(c.subScores, c.aiAvailable)}${p ? `; ${describeProfile(p)}` : ''}.`;
     }),
   ];
 

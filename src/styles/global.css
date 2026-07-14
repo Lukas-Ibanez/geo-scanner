@@ -492,6 +492,97 @@ a:hover {
   box-shadow: var(--shadow);
 }
 
+/* ---------- Reporte premium (landing) ---------- */
+.premium {
+  background: linear-gradient(180deg, transparent, var(--blue-50) 40%, transparent);
+}
+.premium-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  padding: 34px 30px;
+  margin-top: 12px;
+  border: 1.5px solid var(--blue-100);
+}
+.premium-includes h3 {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+}
+.premium-includes ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.premium-includes li {
+  position: relative;
+  padding-left: 28px;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.premium-includes li strong {
+  color: var(--ink, #15203a);
+}
+.premium-includes li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  color: var(--blue-700);
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.premium-buy {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 24px;
+  text-align: center;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-radius: var(--radius);
+  align-self: start;
+}
+.premium-price .amount {
+  display: block;
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.premium-price .per {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.premium-how {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.premium-buy .btn {
+  width: 100%;
+  justify-content: center;
+}
+.premium-note {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 /* ---------- Scan form ---------- */
 .scan-card {
   max-width: 600px;
@@ -1540,6 +1631,11 @@ a:hover {
   }
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .premium-card {
+    grid-template-columns: 1.5fr 1fr;
+    align-items: start;
+    padding: 40px 38px;
   }
   .scan-form-container {
     grid-template-columns: 1.3fr 1fr;

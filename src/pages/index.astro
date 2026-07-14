@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     q: '¿Es gratis?',
-    a: 'Sí. El escaneo, el puntaje y el informe con recomendaciones son gratis. Solo te pido tu correo para enviarte el informe completo y el plan de mejoras; no necesitas crear una cuenta.',
+    a: 'Sí. El escaneo, el puntaje y el informe con recomendaciones son gratis. Solo te pido tu correo para enviarte el informe completo; no necesitas crear una cuenta. Si quieres ir más allá, existe un reporte premium (US$5, pago único) con plan de acción priorizado, comparativa contra tus competidores y un PDF profesional.',
   },
   {
     q: '¿Qué necesito para usarlo?',
@@ -148,7 +148,17 @@ const jsonLd = {
       description:
         'Herramienta gratuita que audita qué tan preparado está tu sitio web para aparecer en respuestas de IA como ChatGPT, Perplexity, Gemini y Google AI Overviews. Hecha en Chile para negocios de habla hispana.',
       isAccessibleForFree: true,
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      offers: [
+        { '@type': 'Offer', name: 'Escaneo GEO gratis', price: '0', priceCurrency: 'USD' },
+        {
+          '@type': 'Offer',
+          name: 'Reporte GEO premium',
+          description:
+            'Informe detallado con plan de acción priorizado, comparativa con competidores y reporte PDF profesional.',
+          price: '5',
+          priceCurrency: 'USD',
+        },
+      ],
       author: { '@id': `${AUTHOR_URL}/#lukas` },
       creator: { '@id': `${AUTHOR_URL}/#lukas` },
       publisher: { '@id': `${AUTHOR_URL}/#organization` },
@@ -312,7 +322,7 @@ const jsonLd = {
           <article class="step card">
             <span class="num">1</span>
             <h3>Pega tu dirección</h3>
-            <p>Escribe la web de tu negocio. Verificás que sos humano con un click y arrancamos.</p>
+            <p>Escribe la web de tu negocio, confirma que eres humano con un clic y listo.</p>
           </article>
           <article class="step card">
             <span class="num">2</span>
@@ -404,6 +414,55 @@ const jsonLd = {
               el mismo contenido obtiene siempre el mismo número.
             </p>
           </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Reporte premium ===== -->
+    <section class="section premium" id="premium">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">Reporte premium</span>
+          <h2>El análisis completo, con plan de acción y competencia</h2>
+          <p class="sub">
+            El escaneo gratis te dice dónde estás parado. El reporte premium te dice exactamente
+            qué hacer, en qué orden y cómo te comparas con tu competencia.
+          </p>
+        </div>
+
+        <div class="premium-card card">
+          <div class="premium-includes">
+            <h3>Qué incluye</h3>
+            <ul>
+              <li><strong>Resumen ejecutivo:</strong> 3 fortalezas, 3 brechas y un veredicto directo sobre tu sitio.</li>
+              <li><strong>Diagnóstico por dimensión:</strong> qué significa cada puntaje en tu negocio concreto y qué te cuesta dejarlo así.</li>
+              <li><strong>Plan de acción priorizado:</strong> qué hacer primero, con el impacto, el esfuerzo y el plazo de cada acción.</li>
+              <li><strong>Cómo te describiría una IA hoy</strong> a un cliente que le pide una recomendación en tu rubro.</li>
+              <li><strong>Comparativa con hasta 3 competidores</strong>, medidos con la misma vara, y qué hace cada uno que a ti te falta.</li>
+              <li><strong>Las preguntas que tus clientes le hacen a una IA</strong> y si tu sitio tiene contenido para responderlas.</li>
+              <li><strong>Reporte PDF profesional</strong> listo para imprimir o compartir, más el informe completo en tu correo.</li>
+            </ul>
+          </div>
+
+          <div class="premium-buy">
+            <div class="premium-price">
+              <span class="amount">US$5</span>
+              <span class="per">pago único por sitio</span>
+            </div>
+            <p class="premium-how">
+              Escríbeme, recibe tu código de acceso y desbloquea el informe completo en tu
+              próximo escaneo. Sin suscripciones.
+            </p>
+            <a class="btn btn-primary btn-lg" href={`${AUTHOR_URL}/#servicios`}>
+              Quiero mi reporte premium
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="btn btn-ghost" href="/scan">Primero escanear gratis</a>
+            <p class="premium-note">
+              ¿Prefieres que las mejoras las implemente alguien por ti? Ese es justamente
+              mi servicio: el reporte te dice qué hacer y yo me encargo del cómo.
+            </p>
+          </div>
         </div>
       </div>
     </section>

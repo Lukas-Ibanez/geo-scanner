@@ -71,6 +71,9 @@ export type AccessLevel = 'teaser' | 'full' | 'detailed';
 export interface ScoreSnapshot {
   finalScore: number | null;
   subScores: SubScores | null;
+  /** false = la IA no pudo evaluar el contenido: el puntaje es solo técnico y
+   *  las 4 dimensiones de contenido no valen (mostrar "—", no 0). */
+  aiAvailable?: boolean;
 }
 
 /** Un competidor evaluado con el mismo método que el cliente. */
@@ -79,6 +82,8 @@ export interface CompetitorComparison {
   domain: string;
   finalScore: number | null; // null si no se pudo evaluar (ver `error`)
   subScores: SubScores | null;
+  /** false = solo evaluación técnica (la IA degradó): dimensiones de contenido en "—". */
+  aiAvailable?: boolean;
   error?: string;
 }
 

@@ -698,6 +698,42 @@ p {
   font-style: italic;
 }
 
+/* === CTA de contratación === */
+.hire-cta {
+  margin-top: 26px;
+  padding: 26px 30px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1.5px solid #bfdbfe;
+  text-align: center;
+}
+.hire-cta h3 {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  color: var(--brand);
+}
+.hire-cta p {
+  max-width: 560px;
+  margin: 0 auto 16px;
+  font-size: 0.96rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.hire-btn {
+  display: inline-block;
+  padding: 13px 26px;
+  border-radius: 10px;
+  background: var(--brand-2);
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.hire-cta .hire-alt {
+  margin: 12px 0 0;
+  font-size: 0.86rem;
+  color: var(--soft);
+}
+
 /* === Footer del reporte === */
 .report-footer {
   margin-top: 48px;
@@ -774,7 +810,8 @@ p {
   .action-item,
   .dim-item,
   .cmp-insights li,
-  .ai-perception {
+  .ai-perception,
+  .hire-cta {
     page-break-inside: avoid;
   }
   a {

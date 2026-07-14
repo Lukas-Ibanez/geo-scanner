@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       );
       if (!turn.success) {
         return json(
-          { error: turn.error || 'Verificación anti-bot falló. Probá de nuevo.' },
+          { error: turn.error || 'Verificación anti-bot falló. Inténtalo de nuevo.' },
           403
         );
       }

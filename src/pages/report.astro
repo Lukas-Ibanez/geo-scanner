@@ -105,6 +105,10 @@ const phaseMedium = recs.slice(2, 4);
 const phaseLong = recs.slice(4);
 
 const levelLabels: Record<string, string> = { alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
+// Dimensión de contenido en la tabla comparativa: "—" si la IA no pudo evaluar
+// ese sitio (el 0 de relleno confunde: parece un puntaje real).
+const dimCell = (v: number, aiAvailable?: boolean): string | number =>
+  aiAvailable === false ? '—' : v;
 // Diagnóstico por dimensión indexado para pintarlo junto a la tabla de subpuntajes.
 const diagnosisByDim = new Map(
   (r.detailedReport?.dimensionDiagnosis ?? []).map((d) => [d.dimension, d])
@@ -141,6 +145,10 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
   month: 'long',
   year: 'numeric',
 });
+
+// CTA de contratación: el momento de mayor intención es justo después de leer
+// el plan de acción. Configurable por env (mismo default que el correo).
+const ctaUrl = env.PORTFOLIO_CTA_URL || 'https://lukasibanez.dev/#servicios';
 ---
 
 <!doctype html>
@@ -353,10 +361,10 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
                   {r.detailedReport.clientComparison.subScores ? (
                     <>
                       <td>{r.detailedReport.clientComparison.subScores.tecnico}</td>
-                      <td>{r.detailedReport.clientComparison.subScores.claridadNegocio}</td>
-                      <td>{r.detailedReport.clientComparison.subScores.citabilidad}</td>
-                      <td>{r.detailedReport.clientComparison.subScores.autoridad}</td>
-                      <td>{r.detailedReport.clientComparison.subScores.claridadGeografica}</td>
+                      <td>{dimCell(r.detailedReport.clientComparison.subScores.claridadNegocio, r.detailedReport.clientComparison.aiAvailable)}</td>
+                      <td>{dimCell(r.detailedReport.clientComparison.subScores.citabilidad, r.detailedReport.clientComparison.aiAvailable)}</td>
+                      <td>{dimCell(r.detailedReport.clientComparison.subScores.autoridad, r.detailedReport.clientComparison.aiAvailable)}</td>
+                      <td>{dimCell(r.detailedReport.clientComparison.subScores.claridadGeografica, r.detailedReport.clientComparison.aiAvailable)}</td>
                     </>
                   ) : (
                     <td colspan="5" style="color:var(--muted);">—</td>
@@ -374,10 +382,10 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
                   {c.subScores ? (
                     <>
                       <td>{c.subScores.tecnico}</td>
-                      <td>{c.subScores.claridadNegocio}</td>
-                      <td>{c.subScores.citabilidad}</td>
-                      <td>{c.subScores.autoridad}</td>
-                      <td>{c.subScores.claridadGeografica}</td>
+                      <td>{dimCell(c.subScores.claridadNegocio, c.aiAvailable)}</td>
+                      <td>{dimCell(c.subScores.citabilidad, c.aiAvailable)}</td>
+                      <td>{dimCell(c.subScores.autoridad, c.aiAvailable)}</td>
+                      <td>{dimCell(c.subScores.claridadGeografica, c.aiAvailable)}</td>
                     </>
                   ) : (
                     <td colspan="5" style="color:var(--muted);">—</td>
@@ -539,12 +547,17 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
             las IA leen y recomiendan tu sitio. Cuando estén listos, vuelve a correr el reporte para
             ver el avance.
           </p>
+        </div>
 
-          <h3>¿Quieres ayuda implementándolo?</h3>
+        <div class="hire-cta">
+          <h3>¿Quieres que estas mejoras las haga alguien por ti?</h3>
           <p>
-            Si prefieres que alguien haga estas mejoras por ti, escríbeme a
-            <a href="https://lukasibanez.dev/#servicios">lukasibanez.dev</a>.
+            Este reporte te dice <strong>qué</strong> hacer. Si prefieres no ocuparte del cómo,
+            yo implemento el plan completo en tu sitio: soy Lukas Ibáñez, desarrollador web
+            con experiencia en infraestructura, SEO y GEO — el mismo que construyó esta herramienta.
           </p>
+          <a class="hire-btn" href={ctaUrl}>Conversemos sobre tu plan →</a>
+          <p class="hire-alt">O escríbeme directo desde <a href={ctaUrl}>lukasibanez.dev</a></p>
         </div>
 
         <div class="report-footer">

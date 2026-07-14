@@ -729,17 +729,17 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
         | null;
       if (res.ok && data && data.valid === true) {
         isPassphraseValid = true;
-        updatePpStatus('ok', 'Código correcto. Ya podés comparar contra competidores.');
+        updatePpStatus('ok', 'Código correcto. Ya puedes comparar contra competidores.');
         updateCompSectionVisibility();
       } else if (res.status === 429) {
-        updatePpStatus('err', data?.error || 'Demasiados intentos. Esperá un momento.');
+        updatePpStatus('err', data?.error || 'Demasiados intentos. Espera un momento.');
       } else {
         isPassphraseValid = false;
         updatePpStatus('bad', 'Código incorrecto.');
         updateCompSectionVisibility();
       }
     } catch {
-      updatePpStatus('err', 'No pudimos validar el código. Reintentá.');
+      updatePpStatus('err', 'No pudimos validar el código. Inténtalo de nuevo.');
       updateCompSectionVisibility();
     } finally {
       validateBtn.disabled = false;
@@ -756,7 +756,7 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     if (!isPassphraseValid) {
       renderDetectError(
         suggestionsList,
-        'Ingresá un código de acceso válido para usar la comparación con competidores.'
+        'Ingresa un código de acceso válido para usar la comparación con competidores.'
       );
       return;
     }
