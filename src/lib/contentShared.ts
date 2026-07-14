@@ -37,7 +37,7 @@ Evalúa cuatro dimensiones, cada una de 0 a 100. Puntúa de forma MECÁNICA: apl
 Y entregas entre 3 y 5 recomendaciones.
 
 REGLAS de las recomendaciones (estrictas):
-- En ESPAÑOL.
+- En ESPAÑOL neutro, tratando al lector de "tú" (tuteo: "explica", "indica", "agrega"). PROHIBIDO el voseo ("explicá", "tenés", "vos").
 - En lenguaje de DUEÑO DE NEGOCIO, NO técnico. PROHIBIDO usar términos como "JSON-LD", "schema", "meta description", "etiqueta", "H1", "canonical", "robots.txt", "sitemap".
 - Explica el IMPACTO en el negocio, no la implementación técnica. Ejemplo correcto: "Tu sitio no le explica con claridad a la IA en qué ciudad atiendes, así que te deja fuera cuando alguien busca tu servicio en tu zona." Ejemplo incorrecto: "Agrega JSON-LD de tipo LocalBusiness."
 - Concretas, accionables y ordenadas de mayor a menor impacto.`;

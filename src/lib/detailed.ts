@@ -162,7 +162,8 @@ Recibirás el contenido de su sitio, su puntaje (0-100), los subpuntajes por dim
 4) "percepcionIA": 2-4 frases que describan cómo entendería HOY este negocio una IA que lea su sitio: qué diría que hace, para quién y dónde, y qué se le quedaría afuera o confuso. Redáctalo como si la IA describiera el negocio a un usuario que pide una recomendación.
 
 REGLAS GLOBALES:
-- Todo en español, en lenguaje de DUEÑO DE NEGOCIO.
+- Todo en español NEUTRO, tratando al lector de "tú" (tuteo: "publica", "muestra", "tu sitio"). PROHIBIDO el voseo rioplatense ("publicá", "tenés", "vos").
+- Lenguaje de DUEÑO DE NEGOCIO.
 - PROHIBIDA la jerga técnica: "JSON-LD", "schema", "meta", "etiqueta", "H1", "canonical", "robots.txt", "sitemap", "HTML". Di "los robots de IA", "la información estructurada de tu sitio", "los textos de presentación", etc.
 - Basa TODO en los datos entregados. No inventes cifras, servicios ni competidores.
 - Sé específico: nombra los servicios, el rubro y la zona del cliente cuando el contenido los revele.`;
@@ -458,6 +459,7 @@ Devuelve DOS cosas:
    - "queHacenMejor": 1-2 frases CONCRETAS sobre qué hace mejor ese competidor según sus puntajes y sus títulos/encabezados (ej: muestra sus servicios con nombres claros, deja explícita su zona, exhibe señales de experiencia), y qué de eso le conviene replicar primero al cliente. Si el competidor NO supera al cliente, dilo y destaca qué ventaja mantener.
 
 REGLAS estrictas:
+- Español NEUTRO, tratando al lector de "tú" (tuteo). PROHIBIDO el voseo ("tenés", "mostrá", "vos").
 - Lenguaje de DUEÑO DE NEGOCIO; habla de impacto en el negocio, NO de implementación técnica.
 - PROHIBIDO usar jerga técnica: "JSON-LD", "schema", "meta", "etiqueta", "H1", "canonical", "robots.txt", "sitemap", "HTML".
 - No inventes datos: básate SOLO en los puntajes y en los títulos/encabezados entregados.`;
@@ -558,7 +560,8 @@ const QUESTIONS_SYSTEM = `Eres experto en GEO. Dado el contenido de un sitio, ge
 Cubre una mezcla: preguntas de intención de compra ("¿cuánto cuesta...?", "¿quién hace... en [zona]?"), de confianza ("¿es confiable...?", "¿qué experiencia tiene...?") y de proceso ("¿cómo trabajan...?", "¿qué incluye...?").
 
 REGLAS estrictas:
-- En español, en lenguaje de DUEÑO DE NEGOCIO (no técnico).
+- En español NEUTRO, tratando al dueño de "tú" (tuteo). PROHIBIDO el voseo ("tenés", "ofrecés", "vos").
+- Lenguaje de DUEÑO DE NEGOCIO (no técnico).
 - PROHIBIDO usar jerga técnica: "JSON-LD", "schema", "meta", "etiqueta", "H1", "canonical", "robots.txt", "sitemap".
 - "cubierta" es true solo si el contenido recibido permitiría a una IA responder esa pregunta citando al sitio.
 - "nota" explica en lenguaje de negocio por qué sí o por qué no está cubierta, y si no lo está, qué información debería existir para cubrirla (QUÉ agregar, no CÓMO implementarlo).`;
