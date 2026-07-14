@@ -134,6 +134,7 @@ export interface CallGeminiToolArgs {
   model?: string;
   maxOutputTokens?: number;
   temperature?: number;
+  tools?: Array<{ googleSearch?: Record<string, never> }>; // herramientas habilitadas (opcional)
 }
 
 export async function callGeminiTool<T>(args: CallGeminiToolArgs): Promise<T | null> {
@@ -167,6 +168,10 @@ export async function callGeminiTool<T>(args: CallGeminiToolArgs): Promise<T | n
       ...(model.startsWith('gemini-2') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
     },
   };
+  // Tools opcionales (ej. googleSearch para skip el orange-to-orange).
+  if (args.tools && args.tools.length) {
+    body.tools = args.tools;
+  }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const TRANSIENT = new Set([429, 500, 502, 503, 504]);

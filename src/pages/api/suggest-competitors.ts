@@ -81,20 +81,15 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       }
     }
 
-    // 1 fetch del sitio + 1 call a Claude. Caben de sobra en el límite de 50 subrequests.
+    // 1 fetch del sitio + hasta 2 calls a Gemini (una con signals, fallback
+    // con googleSearch si no pudimos leer el sitio — orange-to-orange).
+    // Caben de sobra en el límite de 50 subrequests.
     const site = await fetchSite(origin, url);
-    if (!site.ok || !site.html) {
-      return json(
-        {
-          error:
-            'No pudimos leer este sitio. Puede estar bloqueando lectores automáticos o no estar disponible.',
-        },
-        502
-      );
-    }
-    const signals = await parseHtml(site.html);
+    const signals = site.ok && site.html ? await parseHtml(site.html) : null;
 
-    const competitors = await suggestCompetitors(signals, env);
+    // Si signals está vacío, suggestCompetitors hace fallback a Gemini con
+    // googleSearch — Google hace el fetch por nosotros y saltea el orange-to-orange.
+    const competitors = await suggestCompetitors({ signals, url }, env);
     return json({ competitors });
   } catch (err) {
     console.error('suggest-competitors failed:', err);

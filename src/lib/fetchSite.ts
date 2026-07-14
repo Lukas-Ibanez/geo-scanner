@@ -19,29 +19,22 @@ interface FetchTextResult {
 }
 
 async function readCapped(res: Response, maxBytes: number): Promise<string> {
-  if (!res.body) return await res.text().catch(() => '');
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let received = 0;
-  let out = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      received += value.byteLength;
-      out += decoder.decode(value, { stream: true });
-      if (received >= maxBytes) {
-        try {
-          await reader.cancel();
-        } catch {
-          /* noop */
-        }
-        break;
-      }
-    }
+  // Antes usábamos getReader() + streaming chunk-by-chunk. Eso hace que el
+  // Worker se cuelgue en `reader.read()` cuando hace outbound a un sitio
+  // detrás de Cloudflare (orange-to-orange: Worker CF → sitio CF). El
+  // Promise.race de más abajo evita el cuelgue total del Worker, pero igual
+  // terminaba devolviendo `ok: false` para sitios tipo cyclonemotos.cl.
+  //
+  // Solución: leer el body completo via arrayBuffer() (que internamente usa
+  // un solo read nativo, no streaming) y cortar a maxBytes. La lectura se
+  // completa aunque el reader se cuelgue en streaming.
+  try {
+    const buf = await res.arrayBuffer();
+    const slice = buf.byteLength > maxBytes ? buf.slice(0, maxBytes) : buf;
+    return new TextDecoder('utf-8').decode(slice);
+  } catch {
+    return await res.text().catch(() => '');
   }
-  out += decoder.decode();
-  return out;
 }
 
 const FAILED = (url: string): FetchTextResult => ({ ok: false, status: 0, text: '', finalUrl: url });
@@ -126,8 +119,12 @@ export async function probeReachable(origin: string): Promise<boolean> {
         },
       });
       // 2xx (ok) y 3xx (redirects que ya seguimos) cuentan como alcanzable.
-      // 4xx/5xx -> probamos con el otro método antes de rendirnos.
+      // 4xx (no 405) -> sitio responde pero rechaza / no existe -> no seguimos.
+      // 405 (Method Not Allowed) -> el método no aplica, caemos al siguiente
+      //   (muchos sitios medianos/chicos no implementan HEAD pero sí GET).
+      // 5xx -> probá el otro método.
       if (res.ok || (res.status >= 300 && res.status < 400)) return true;
+      if (res.status === 405) continue; // probar el otro método
       if (res.status >= 400 && res.status < 500) return false;
       // 5xx -> probá el otro método.
     } catch {
