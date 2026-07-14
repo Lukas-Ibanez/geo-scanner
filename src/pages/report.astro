@@ -95,13 +95,20 @@ const ringClass = bandClass(r.finalScore);
 const ringLabel =
   r.finalScore >= 70 ? 'Bien' : r.finalScore >= 45 ? 'Aceptable' : 'A mejorar';
 
-// Construimos el plan de acción priorizado por fases a partir de las
-// recomendaciones existentes. Sin AI adicional: las recomendaciones ya vienen
-// ordenadas por impacto (vienen de Gemini con temperature 0 + seed).
+// Plan de acción: la fuente principal es el actionPlan del informe premium
+// (Claude Sonnet, priorizado por impacto/esfuerzo). Si esa sección degradó,
+// caemos al plan por fases construido con las recomendaciones del escaneo base.
+const actionPlan = r.detailedReport?.actionPlan ?? null;
 const recs = r.recommendations || [];
 const phaseQuick = recs.slice(0, 2);
 const phaseMedium = recs.slice(2, 4);
 const phaseLong = recs.slice(4);
+
+const levelLabels: Record<string, string> = { alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
+// Diagnóstico por dimensión indexado para pintarlo junto a la tabla de subpuntajes.
+const diagnosisByDim = new Map(
+  (r.detailedReport?.dimensionDiagnosis ?? []).map((d) => [d.dimension, d])
+);
 
 const checkGroups: Array<{ title: string; ids: string[] }> = [
   {
@@ -205,6 +212,17 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
         ) : (
           <p class="intro">El resumen ejecutivo no pudo generarse en este momento; el resto del reporte está completo.</p>
         )}
+
+        {r.detailedReport?.aiPerception && (
+          <div class="ai-perception">
+            <h3>Cómo te describiría una IA hoy</h3>
+            <p>{r.detailedReport.aiPerception}</p>
+            <p class="ai-perception-note">
+              Redactado a partir de lo que una IA puede leer hoy en tu sitio. Si esta descripción
+              no es la que quieres que reciban tus clientes, el plan de acción de este reporte es el camino para corregirla.
+            </p>
+          </div>
+        )}
       </section>
 
       <!-- ===== Puntaje, dimensión por dimensión ===== -->
@@ -246,6 +264,28 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
             })}
           </tbody>
         </table>
+
+        {diagnosisByDim.size > 0 && (
+          <div class="dim-diagnosis">
+            <h3>Qué significa cada puntaje en tu negocio</h3>
+            {Object.keys(dimLabels).map((key) => {
+              const k = key as keyof SubScores;
+              const d = diagnosisByDim.get(k);
+              if (!d) return null;
+              const bc = bandClass(r.subScores[k]);
+              return (
+                <div class="dim-item">
+                  <div class="dim-item-head">
+                    <strong>{dimLabels[k].label}</strong>
+                    <span class={`subscore-value ${bc}`}>{r.subScores[k]}/100</span>
+                  </div>
+                  <p class="dim-lectura">{d.lectura}</p>
+                  <p class="dim-implicancia">Si lo dejas como está: {d.implicancia}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <!-- ===== Análisis técnico ===== -->
@@ -350,6 +390,20 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
           {r.detailedReport.competitorsSummary && (
             <div class="cmp-summary">{r.detailedReport.competitorsSummary}</div>
           )}
+
+          {r.detailedReport.competitorInsights && r.detailedReport.competitorInsights.length > 0 && (
+            <div class="cmp-insights">
+              <h3>Qué hace cada competidor que a ti te falta</h3>
+              <ul>
+                {r.detailedReport.competitorInsights.map((i) => (
+                  <li>
+                    <strong>{i.domain}</strong>
+                    <p>{i.queHacenMejor}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
@@ -381,11 +435,39 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
       <!-- ===== Plan de acción priorizado ===== -->
       <section class="page">
         <h2 class="section-title"><span class="num">06 ·</span> Plan de acción priorizado</h2>
-        <p class="intro">
-          Las recomendaciones están ordenadas por el impacto que tienen en tu visibilidad ante las IA.
-          Las agrupamos en tres fases según la urgencia y el esfuerzo que toman.
-        </p>
+        {actionPlan ? (
+          <>
+            <p class="intro">
+              Cada acción indica <strong>qué</strong> lograr, cuánto impacto tiene en tu visibilidad ante las IA,
+              el esfuerzo que toma y el plazo sugerido. Están ordenadas: parte por la primera.
+              La implementación técnica de cada punto es un servicio aparte — este reporte te dice qué priorizar.
+            </p>
+            <ol class="action-plan">
+              {actionPlan.map((a, idx) => (
+                <li class="action-item">
+                  <div class="action-head">
+                    <span class="action-idx">{idx + 1}</span>
+                    <p class="action-title">{a.accion}</p>
+                  </div>
+                  {a.porQue && <p class="action-why">{a.porQue}</p>}
+                  <div class="action-meta">
+                    <span class={`badge impacto-${a.impacto}`}>Impacto {levelLabels[a.impacto]}</span>
+                    <span class={`badge esfuerzo-${a.esfuerzo}`}>Esfuerzo {levelLabels[a.esfuerzo]}</span>
+                    <span class="badge plazo">{a.plazo}</span>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <p class="intro">
+            Las recomendaciones están ordenadas por el impacto que tienen en tu visibilidad ante las IA.
+            Las agrupamos en tres fases según la urgencia y el esfuerzo que toman.
+          </p>
+        )}
 
+        {!actionPlan && (
+        <>
         <div class="phase">
           <div class="phase-header">
             <h3>Fase 1 · Quick wins (esta semana)</h3>
@@ -427,6 +509,8 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
             <p class="empty">Tu sitio ya cubre las recomendaciones de mediano plazo. Mantén y mide.</p>
           )}
         </div>
+        </>
+        )}
       </section>
 
       <!-- ===== Cierre ===== -->
@@ -435,23 +519,25 @@ const generatedAtFmt = new Date(r.scannedAt).toLocaleDateString('es-CL', {
         <div class="methodology">
           <h3>Cómo se construye</h3>
           <p>
-            Este reporte combina un análisis técnico determinista (9 checks objetivos de tu HTML),
+            Este reporte combina un análisis técnico determinista (9 checks objetivos de tu sitio),
             un análisis de contenido con IA (4 dimensiones: claridad de negocio, citabilidad,
-            autoridad, claridad geográfica), y — en este nivel pagado — una comparación con
-            tus competidores y un análisis de las preguntas que tus clientes le harían a una IA.
+            autoridad, claridad geográfica), y — en este nivel pagado — un diagnóstico por dimensión,
+            un plan de acción priorizado, una comparación con tus competidores y un análisis de las
+            preguntas que tus clientes le harían a una IA.
           </p>
           <p>
             El puntaje técnico y los 4 subpuntajes de contenido son reproducibles: si vuelves a
-            escanear el mismo sitio en la misma fecha, obtienes los mismos números. La prosa del
-            resumen ejecutivo, la síntesis competitiva y las preguntas-cliente las genera Claude
-            (Haiku 4.5) y se evalúan contra los datos del sitio.
+            escanear el mismo sitio en la misma fecha, obtienes los mismos números. El diagnóstico,
+            el plan de acción, la síntesis competitiva y las preguntas-cliente los genera Claude
+            (Sonnet), el modelo de análisis más avanzado que usamos, y se contrastan contra los
+            datos reales de tu sitio.
           </p>
 
           <h3>Próximo paso recomendado</h3>
           <p>
-            Empieza por la Fase 1. Son los cambios que vas a sentir primero en cómo las IA leen
-            y recomiendan tu sitio. Cuando estén listos, vuelve a correr el reporte para ver el
-            avance.
+            Empieza por la primera acción del plan. Son los cambios que vas a sentir primero en cómo
+            las IA leen y recomiendan tu sitio. Cuando estén listos, vuelve a correr el reporte para
+            ver el avance.
           </p>
 
           <h3>¿Quieres ayuda implementándolo?</h3>

@@ -256,6 +256,67 @@ p {
   font-style: italic;
 }
 
+/* === Percepción de las IA (dentro del resumen ejecutivo) === */
+.ai-perception {
+  margin-top: 22px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+}
+.ai-perception h3 {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-2);
+}
+.ai-perception p {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+.ai-perception .ai-perception-note {
+  font-size: 0.86rem;
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+/* === Diagnóstico por dimensión === */
+.dim-diagnosis {
+  margin-top: 26px;
+}
+.dim-diagnosis > h3 {
+  margin-bottom: 14px;
+}
+.dim-item {
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 10px;
+}
+.dim-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.dim-item-head strong {
+  font-size: 0.98rem;
+}
+.dim-lectura {
+  font-size: 0.94rem;
+  margin-bottom: 6px;
+}
+.dim-implicancia {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 0;
+  font-style: italic;
+}
+
 /* === Subscores === */
 .subscore-table {
   width: 100%;
@@ -423,6 +484,35 @@ p {
   color: var(--ink);
 }
 
+/* === Insights por competidor === */
+.cmp-insights {
+  margin-top: 20px;
+}
+.cmp-insights ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 10px;
+}
+.cmp-insights li {
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.cmp-insights li strong {
+  display: block;
+  color: var(--brand-2);
+  font-size: 0.94rem;
+  margin-bottom: 4px;
+}
+.cmp-insights li p {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
 /* === Preguntas-cliente === */
 .q-list {
   list-style: none;
@@ -470,6 +560,90 @@ p {
   font-size: 0.92rem;
   margin: 0;
   line-height: 1.5;
+}
+
+/* === Plan de acción priorizado (premium) === */
+.action-plan {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 0;
+  display: grid;
+  gap: 12px;
+  counter-reset: none;
+}
+.action-item {
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.action-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.action-idx {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand-2);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.84rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(4px);
+}
+.action-title {
+  font-weight: 700;
+  font-size: 1rem;
+  margin: 0;
+  line-height: 1.45;
+}
+.action-why {
+  margin: 8px 0 0 38px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.action-meta {
+  margin: 10px 0 0 38px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: var(--bg-soft);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.badge.impacto-alto {
+  background: #dcfce7;
+  color: var(--good);
+  border-color: #bbf7d0;
+}
+.badge.impacto-medio {
+  background: #fef3c7;
+  color: var(--mid);
+  border-color: #fde68a;
+}
+.badge.esfuerzo-alto {
+  background: #fee2e2;
+  color: var(--bad);
+  border-color: #fecaca;
+}
+.badge.plazo {
+  background: #eff6ff;
+  color: var(--brand-2);
+  border-color: #bfdbfe;
 }
 
 /* === Plan priorizado por fases === */
@@ -596,7 +770,11 @@ p {
   .summary-block,
   .check-item,
   .q-item,
-  .cmp-table tr {
+  .cmp-table tr,
+  .action-item,
+  .dim-item,
+  .cmp-insights li,
+  .ai-perception {
     page-break-inside: avoid;
   }
   a {

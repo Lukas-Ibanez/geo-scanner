@@ -42,6 +42,10 @@ export interface CallClaudeToolArgs {
   inputSchema: object;
   env: Env;
   model?: string;
+  /** Tope de tokens de salida. Default 2048; el núcleo premium necesita más. */
+  maxTokens?: number;
+  /** Timeout por intento en ms. Default 15s; salidas largas de Sonnet toman más. */
+  timeoutMs?: number;
 }
 
 /**
@@ -74,7 +78,7 @@ export async function callClaudeTool<T>(args: CallClaudeToolArgs): Promise<T | n
     // si el prefijo supera el mínimo del modelo; si no, es inocuo).
     system: [{ type: 'text', text: args.system, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: args.userPrompt }],
-    max_tokens: 2048, // requerido por Anthropic (a diferencia de Gemini)
+    max_tokens: args.maxTokens ?? 2048, // requerido por Anthropic (a diferencia de Gemini)
     temperature: 0, // determinismo; Claude no tiene seed (Haiku 4.5 sí acepta temperature)
     tools: [{ name: args.toolName, description: args.toolDescription, input_schema: args.inputSchema }],
     tool_choice: { type: 'tool', name: args.toolName },
@@ -86,9 +90,10 @@ export async function callClaudeTool<T>(args: CallClaudeToolArgs): Promise<T | n
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   let lastReason = 'unknown';
 
+  const timeoutMs = args.timeoutMs ?? TIMEOUT_MS;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(url, {
         method: 'POST',

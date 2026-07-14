@@ -96,16 +96,48 @@ export interface ExecutiveSummary {
   verdict: string;
 }
 
+/** Diagnóstico de una dimensión del puntaje, aterrizado al negocio concreto del cliente. */
+export interface DimensionDiagnosis {
+  /** Clave de la dimensión (misma que SubScores: tecnico, claridadNegocio, ...). */
+  dimension: keyof SubScores;
+  /** Qué dice el puntaje sobre ESTE negocio (no genérico). */
+  lectura: string;
+  /** Qué le cuesta al negocio dejarlo como está. */
+  implicancia: string;
+}
+
+/** Una acción del plan priorizado: el QUÉ hacer, nunca el cómo técnico. */
+export interface ActionItem {
+  accion: string;
+  porQue: string; // impacto esperado en visibilidad ante las IA
+  impacto: 'alto' | 'medio' | 'bajo';
+  esfuerzo: 'bajo' | 'medio' | 'alto';
+  plazo: string; // ej: "esta semana", "este mes", "1-3 meses"
+}
+
+/** Dónde un competidor concreto le gana al cliente y qué conviene replicar primero. */
+export interface CompetitorInsight {
+  domain: string;
+  queHacenMejor: string;
+}
+
 /**
  * Informe detallado (nivel 'detailed'): análisis que el escaneo gratis no hace.
  * Cada sección degrada por separado (null) sin romper el resto del informe.
+ * El "núcleo premium" (executiveSummary + dimensionDiagnosis + actionPlan +
+ * aiPerception) sale de UNA llamada a Claude, así que degrada en bloque.
  */
 export interface DetailedReport {
   competitors: CompetitorComparison[] | null;
   competitorsSummary: string | null;
+  competitorInsights: CompetitorInsight[] | null;
   clientComparison: ScoreSnapshot | null; // puntaje del cliente con el MISMO evaluador que los competidores
   clientQuestions: ClientQuestion[] | null;
   executiveSummary: ExecutiveSummary | null;
+  dimensionDiagnosis: DimensionDiagnosis[] | null;
+  actionPlan: ActionItem[] | null;
+  /** Cómo describiría hoy una IA a este negocio, según el contenido analizado. */
+  aiPerception: string | null;
   generatedAt: string; // ISO
 }
 

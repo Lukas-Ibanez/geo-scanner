@@ -35,12 +35,16 @@ GEMINI_MODEL = "gemini-3.1-flash-lite"
 # Tope interno de llamadas/día (bajo el límite real de 500 del free tier).
 GEMINI_DAILY_LIMIT = "450"
 # --- Claude (solo lo usa el informe detallado — es de pago) ---
-# Modelo de Claude para el análisis de contenido: por defecto 'claude-haiku-4-5'.
+# Modelo de Claude para el SCORING (evaluateWithClaude: cliente y competidores
+# en la comparativa manzana-con-manzana): por defecto 'claude-haiku-4-5'.
+# Se mantiene en Haiku a propósito: barato y consistente entre sitios.
 # ANTHROPIC_MODEL = "claude-haiku-4-5"
 # Tope interno de llamadas/día a Claude, global a contenido + informe detallado (0 = sin tope).
 # ANTHROPIC_DAILY_LIMIT = "200"
-# Modelo del informe detallado (nivel 'detailed'): por defecto 'claude-haiku-4-5'.
-# DETAILED_MODEL = "claude-haiku-4-5"
+# Modelo de la PROSA del informe detallado (resumen ejecutivo, diagnóstico por
+# dimensión, plan de acción, percepción IA, síntesis competitiva, preguntas):
+# por defecto 'claude-sonnet-4-6' — es lo que el cliente paga (~US$0,15-0,40/reporte).
+# DETAILED_MODEL = "claude-sonnet-4-6"
 # DETAILED_PASSPHRASE NO va aquí: es un secret (ver abajo).
 
 # --- Cloudflare Turnstile (protección anti-bot) ---

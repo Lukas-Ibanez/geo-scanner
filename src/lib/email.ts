@@ -2,7 +2,15 @@
 // El envío es "best-effort": si falla no debe tumbar el escaneo (ya se guardó el lead).
 // El email es un informe MÁS DETALLADO que la vista en pantalla: añade interpretación
 // del puntaje, desglose explicado por dimensión y un diagnóstico técnico punto por punto.
-import type { ScanResult, SubScores, TechnicalCheck, DetailedReport, ClientQuestion } from './types';
+import type {
+  ScanResult,
+  SubScores,
+  TechnicalCheck,
+  DetailedReport,
+  ClientQuestion,
+  ActionItem,
+  CompetitorInsight,
+} from './types';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
@@ -109,14 +117,17 @@ function detailedScoreColor(score: number | null | undefined): string {
   return '#ef4444';
 }
 
-// ¿El informe detallado tiene ALGO útil? Si las 3 secciones degradaron a null,
-// devolvemos un fallback honesto en vez de un email con bloques vacíos.
+// ¿El informe detallado tiene ALGO útil? Si todas las secciones degradaron a
+// null, devolvemos un fallback honesto en vez de un email con bloques vacíos.
 function detailedHasContent(rep: DetailedReport): boolean {
   return !!(
     (rep.competitors && rep.competitors.length > 0) ||
     rep.clientComparison ||
     rep.competitorsSummary ||
-    (rep.clientQuestions && rep.clientQuestions.length > 0)
+    (rep.clientQuestions && rep.clientQuestions.length > 0) ||
+    (rep.actionPlan && rep.actionPlan.length > 0) ||
+    rep.aiPerception ||
+    rep.executiveSummary
   );
 }
 
@@ -232,6 +243,59 @@ function detailedSummaryHtml(summary: string): string {
     <p style="margin:0 0 4px;font-size:14px;line-height:1.55;color:#15203a;background:#eef3ff;padding:14px 16px;border-radius:14px;">${esc(summary)}</p>`;
 }
 
+// "Cómo te describiría una IA hoy": espejo de la sección del PDF, en compacto.
+function detailedPerceptionHtml(perception: string): string {
+  return `
+    <p style="margin:18px 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">Cómo te describiría una IA hoy</p>
+    <p style="margin:0 0 4px;font-size:14px;line-height:1.55;color:#15203a;background:#f7f9fd;border:1px solid #e7ecf6;padding:14px 16px;border-radius:14px;">${esc(perception)}</p>`;
+}
+
+const LEVEL_LABELS: Record<string, string> = { alto: 'Alto', medio: 'Medio', bajo: 'Bajo' };
+
+// Plan de acción priorizado (núcleo del informe premium): qué hacer, en orden.
+function detailedActionPlanHtml(plan: ActionItem[]): string {
+  if (!plan.length) return '';
+  const items = plan
+    .map((a, i) => {
+      const impactColor = a.impacto === 'alto' ? '#0f7a55' : a.impacto === 'medio' ? '#b26a00' : '#64708a';
+      return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;border-radius:12px;border:1px solid #e7ecf6;">
+          <tr><td style="padding:12px 16px;">
+            <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#15203a;line-height:1.4;">${i + 1}. ${esc(a.accion)}</p>
+            ${a.porQue ? `<p style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#64708a;">${esc(a.porQue)}</p>` : ''}
+            <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.03em;">
+              <span style="color:${impactColor};">IMPACTO ${esc((LEVEL_LABELS[a.impacto] || a.impacto).toUpperCase())}</span>
+              <span style="color:#9aa7bd;"> · ESFUERZO ${esc((LEVEL_LABELS[a.esfuerzo] || a.esfuerzo).toUpperCase())} · ${esc(a.plazo.toUpperCase())}</span>
+            </p>
+          </td></tr>
+        </table>`;
+    })
+    .join('');
+  return `
+    <p style="margin:18px 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">Plan de acción priorizado</p>
+    <p style="margin:0 0 14px;font-size:12px;line-height:1.55;color:#64708a;">Qué hacer y en qué orden. La implementación de cada punto la puedes delegar — este plan te dice qué priorizar.</p>
+    ${items}`;
+}
+
+// En qué te gana cada competidor (acompaña la tabla comparativa).
+function detailedInsightsHtml(insights: CompetitorInsight[]): string {
+  if (!insights.length) return '';
+  const items = insights
+    .map(
+      (i) => `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;border-radius:12px;border:1px solid #e7ecf6;">
+          <tr><td style="padding:12px 16px;">
+            <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#2f4fc7;">${esc(i.domain)}</p>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#15203a;">${esc(i.queHacenMejor)}</p>
+          </td></tr>
+        </table>`
+    )
+    .join('');
+  return `
+    <p style="margin:18px 0 10px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#2f4fc7;">Qué hace cada competidor que a ti te falta</p>
+    ${items}`;
+}
+
 function detailedEmailHtml(rep: DetailedReport, reportUrl: string): string {
   if (!detailedHasContent(rep)) {
     return `
@@ -244,7 +308,10 @@ function detailedEmailHtml(rep: DetailedReport, reportUrl: string): string {
       </td></tr>`;
   }
 
+  const perceptionHtml = rep.aiPerception ? detailedPerceptionHtml(rep.aiPerception) : '';
+  const planHtml = rep.actionPlan ? detailedActionPlanHtml(rep.actionPlan) : '';
   const compareHtml = detailedCompareHtml(rep);
+  const insightsHtml = rep.competitorInsights ? detailedInsightsHtml(rep.competitorInsights) : '';
   const questionsHtml = rep.clientQuestions ? detailedQuestionsHtml(rep.clientQuestions) : '';
   const summaryHtml = rep.competitorsSummary ? detailedSummaryHtml(rep.competitorsSummary) : '';
 
@@ -252,11 +319,14 @@ function detailedEmailHtml(rep: DetailedReport, reportUrl: string): string {
     <tr><td style="padding:28px 28px 4px;">
       <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.04em;color:#3b63ec;">INFORME DETALLADO</p>
       <p style="margin:0 0 18px;font-size:14px;line-height:1.5;color:#64708a;">
-        Análisis extra que el escaneo gratis no hace: tu sitio comparado con la competencia y preguntas reales que un cliente le haría a una IA.
+        Análisis que el escaneo gratis no hace: cómo te ven las IA, tu plan de acción priorizado, tu sitio comparado con la competencia y las preguntas reales que un cliente le haría a una IA.
       </p>
+      ${perceptionHtml}
+      ${planHtml}
       ${compareHtml}
-      ${questionsHtml}
       ${summaryHtml}
+      ${insightsHtml}
+      ${questionsHtml}
       ${reportUrl ? detailedPdfCtaHtml(reportUrl) : ''}
     </td></tr>`;
 }
@@ -286,6 +356,20 @@ function detailedTextLines(rep: DetailedReport): string[] {
     ];
   }
   const out: string[] = ['', 'INFORME DETALLADO', 'Análisis extra que el escaneo gratis no hace.'];
+
+  if (rep.aiPerception) {
+    out.push('', 'CÓMO TE DESCRIBIRÍA UNA IA HOY');
+    out.push(rep.aiPerception);
+  }
+
+  if (rep.actionPlan && rep.actionPlan.length) {
+    out.push('', 'PLAN DE ACCIÓN PRIORIZADO');
+    rep.actionPlan.forEach((a, i) => {
+      out.push(`${i + 1}. ${a.accion}`);
+      if (a.porQue) out.push(`   ${a.porQue}`);
+      out.push(`   Impacto: ${a.impacto} · Esfuerzo: ${a.esfuerzo} · Plazo: ${a.plazo}`);
+    });
+  }
 
   if (rep.competitors || rep.clientComparison) {
     out.push('', 'TU SITIO VS. LA COMPETENCIA');
@@ -318,6 +402,13 @@ function detailedTextLines(rep: DetailedReport): string[] {
   if (rep.competitorsSummary) {
     out.push('', 'SÍNTESIS');
     out.push(rep.competitorsSummary);
+  }
+
+  if (rep.competitorInsights && rep.competitorInsights.length) {
+    out.push('', 'QUÉ HACE CADA COMPETIDOR QUE A TI TE FALTA');
+    rep.competitorInsights.forEach((i) => {
+      out.push(`- ${i.domain}: ${i.queHacenMejor}`);
+    });
   }
   return out;
 }
