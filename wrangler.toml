@@ -25,15 +25,23 @@ binding = "AI"
 
 # --- Variables (no secretas) ---
 # Proveedor de IA para el ESCANEO BASE (capa gratuita):
-#   'gemini' (activo) | 'hybrid' | 'claude' | 'workers-ai'.
+#   'gemini' | 'hybrid' (recomendado) | 'claude' | 'workers-ai'.
+# Cambió de "gemini" a "hybrid" después de pegarse contra el tope de 450/día
+# en producción (KV `gemini:count:<fecha>` se llenaba tras horas de pruebas y
+# los scans empezaban a degradar). Hybrid = Gemini primario, Workers AI
+# (Llama 3.3 70B) como respaldo automático: si Gemini degrada por cuota
+# 429, timeout o error de schema, Workers AI toma el control y el usuario
+# nunca ve "El análisis de contenido con IA no estuvo disponible".
 # NOTA: el informe detallado (nivel 'detailed') usa Claude SIEMPRE — está
 # hardcoded en src/lib/detailed.ts e ignora este switch.
 [vars]
-AI_PROVIDER = "gemini"
+AI_PROVIDER = "hybrid"
 # Modelo de Gemini: 3.1-flash-lite da 500 req/día gratis (vs 20 de 2.5-flash).
 GEMINI_MODEL = "gemini-3.1-flash-lite"
-# Tope interno de llamadas/día (bajo el límite real de 500 del free tier).
-GEMINI_DAILY_LIMIT = "450"
+# Tope interno de llamadas/día a Gemini (al ras del free tier: 500 RPD).
+# En hybrid Workers AI absorbe lo que Gemini rechace, así que este tope es
+# solo una primera línea para no castigar la API gratuita.
+GEMINI_DAILY_LIMIT = "500"
 # --- Claude (solo lo usa el informe detallado — es de pago) ---
 # Modelo de Claude para el SCORING (evaluateWithClaude: cliente y competidores
 # en la comparativa manzana-con-manzana): por defecto 'claude-haiku-4-5'.

@@ -612,6 +612,10 @@ export async function sendReportEmail(
     console.warn('sendReportEmail: RESEND_API_KEY no configurado, se omite el envío.');
     return false;
   }
+  // Workaround: en producción Cloudflare Pages a veces prepende un BOM
+  // (U+FEFF) al valor del secret. Resend rechaza la key con "API key is invalid"
+  // si empieza con BOM. Lo strippeamos acá antes de armar el Bearer token.
+  const apiKey = env.RESEND_API_KEY.replace(/^\uFEFF/, '').trim();
   const from = env.RESEND_FROM || DEFAULT_FROM;
   const ctaUrl = env.PORTFOLIO_CTA_URL || DEFAULT_CTA_URL;
   const publicUrl = env.PUBLIC_URL || DEFAULT_PUBLIC_URL;
@@ -635,7 +639,7 @@ export async function sendReportEmail(
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify(body),

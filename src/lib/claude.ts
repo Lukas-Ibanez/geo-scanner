@@ -61,6 +61,9 @@ export async function callClaudeTool<T>(args: CallClaudeToolArgs): Promise<T | n
     console.warn(`callClaudeTool(${args.toolName}) sin ANTHROPIC_API_KEY`);
     return null;
   }
+  // Workaround BOM: Cloudflare Pages prepende U+FEFF al secret en runtime;
+  // Anthropic rechaza la key con 401 si empieza con BOM. Lo strippeamos acá.
+  const cleanKey = apiKey.replace(/^\uFEFF/, '').trim();
 
   // Tope diario global de llamadas a Claude (Claude es de pago: protege el presupuesto).
   const parsedLimit = parseInt(args.env.ANTHROPIC_DAILY_LIMIT ?? '', 10);
@@ -98,7 +101,7 @@ export async function callClaudeTool<T>(args: CallClaudeToolArgs): Promise<T | n
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'x-api-key': apiKey,
+          'x-api-key': cleanKey,
           'anthropic-version': ANTHROPIC_VERSION,
           'content-type': 'application/json',
         },
