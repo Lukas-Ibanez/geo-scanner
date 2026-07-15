@@ -66,19 +66,24 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       ? (payload.competitors.filter((c): c is string => typeof c === 'string'))
       : [];
 
+    const rawUrl = typeof payload?.url === 'string' ? payload.url : '';
     let flow;
     try {
       flow = await buildScan(env, ip, {
-        url: typeof payload?.url === 'string' ? payload.url : '',
+        url: rawUrl,
         email: typeof payload?.email === 'string' ? payload.email : null,
         passphrase,
         competitors,
+        // Foreground: solo el puntaje base (rápido). Si es 'detailed', el informe
+        // se genera en segundo plano (abajo) para que el unlock responda al toque.
+        skipDetailed: true,
       });
     } catch (err) {
       if (err instanceof ScanError) return json({ error: err.userMessage }, err.status);
       throw err;
     }
     const { result: full, level, email, entitled } = flow;
+    const waitUntil = locals.runtime.ctx?.waitUntil?.bind(locals.runtime.ctx);
 
     // 3) Guardar el lead (cada submit con email, aunque venga de caché).
     if (email) {
@@ -93,41 +98,55 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       });
     }
 
-    // 4) Proyectar al cliente según el nivel.
-    const projected = projectForClient(full, level);
-
-    // 5) Generar token de acceso al PDF (solo si level==='detailed'). El token
-    // reemplaza a la passphrase en la URL: es random, se guarda en KV con la
-    // URL+competidores, y vence a los 7 días. /report valida el token.
-    // La passphrase NUNCA sale del server — no aparece ni en la URL del mail
-    // ni en los logs del browser/servidor.
-    // Guardamos TAMBIÉN el reporte ya computado (`projected`) bajo el token:
-    // así /report lo renderiza al instante en vez de regenerar el detallado
-    // (Sonnet + evaluar cada competidor con Claude, 20-40s) en cada apertura.
-    let reportToken: string | undefined;
-    let reportUrl: string | undefined;
+    // 4) Nivel 'detailed': respondemos YA con el puntaje base (proyectado como
+    // 'full') y generamos el informe detallado en SEGUNDO PLANO. El cliente hace
+    // poll a /api/report-status con el token hasta que esté listo. El token se
+    // crea vacío (pendiente) y se completa con el resultado al terminar.
     if (level === 'detailed') {
-      reportToken = crypto.randomUUID();
-      await putReportToken(env.SCAN_CACHE, reportToken, {
-        url: full.url,
-        competitors,
-        result: projected,
-      });
+      const reportToken = crypto.randomUUID();
       const publicUrl = (env.PUBLIC_URL || 'https://geo.lukasibanez.dev').replace(/\/$/, '');
-      reportUrl = `${publicUrl}/report?token=${reportToken}`;
+      const reportUrl = `${publicUrl}/report?token=${reportToken}`;
+      await putReportToken(env.SCAN_CACHE, reportToken, { url: full.url, competitors });
+
+      const generateDetailed = async () => {
+        try {
+          const dflow = await buildScan(env, ip, {
+            url: rawUrl,
+            email,
+            passphrase,
+            competitors,
+            accessAlreadyGranted: true,
+          });
+          const dprojected = projectForClient(dflow.result, 'detailed');
+          // Completa el token con el reporte → poll y /report lo sirven al instante.
+          await putReportToken(env.SCAN_CACHE, reportToken, {
+            url: full.url,
+            competitors,
+            result: dprojected,
+          });
+          if (email && dprojected.recommendations && dprojected.recommendations.length) {
+            await sendReportEmail(env, email, dprojected, { reportToken });
+          }
+        } catch (e) {
+          console.error('background detailed failed:', e);
+        }
+      };
+      // En prod waitUntil corre en segundo plano; en local (sin ctx) hacemos await.
+      if (waitUntil) waitUntil(generateDetailed());
+      else await generateDetailed();
+
+      const projectedBase = projectForClient(full, 'full');
+      return json({ ...projectedBase, reportToken, reportUrl, detailedPending: true }, 200);
     }
 
-    // 6) Email: cuando el lead desbloqueó el detalle y hay recomendaciones.
+    // 5) Niveles 'full'/'teaser': proyectar y (si aplica) enviar correo inline.
+    const projected = projectForClient(full, level);
     if (email && entitled && projected.recommendations && projected.recommendations.length) {
-      const send = sendReportEmail(env, email, projected, {
-        reportToken,
-      });
-      const waitUntil = locals.runtime.ctx?.waitUntil?.bind(locals.runtime.ctx);
+      const send = sendReportEmail(env, email, projected, {});
       if (waitUntil) waitUntil(send);
       else await send;
     }
-
-    return json({ ...projected, reportUrl }, 200);
+    return json({ ...projected }, 200);
   } catch (err) {
     console.error('scan failed:', err);
     return json(

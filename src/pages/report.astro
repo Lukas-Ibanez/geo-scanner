@@ -45,9 +45,41 @@ let r: ScanResult;
 if (data.result) {
   // Camino rápido: el reporte ya está computado en el token → render instantáneo.
   r = data.result;
+} else if (Date.now() - Date.parse(data.createdAt || '') < 150000) {
+  // Sin resultado y token reciente (< 2.5 min): el detallado se está generando
+  // en segundo plano. Página con auto-refresh en vez de regenerar (evita
+  // duplicar el trabajo que ya corre en background).
+  const pendingHtml = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="6">
+<meta name="robots" content="noindex,nofollow">
+<title>Generando tu reporte…</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:#f7f4ee;color:#241f1b;padding:24px;}
+  .card{max-width:460px;text-align:center;background:#fff;border:1px solid #ece5da;
+    border-radius:18px;padding:36px 28px;box-shadow:0 18px 48px rgba(60,45,30,.1);}
+  .sp{width:34px;height:34px;margin:0 auto 18px;border-radius:50%;
+    border:3px solid #dce4f6;border-top-color:#3b63ec;animation:s .8s linear infinite;}
+  @keyframes s{to{transform:rotate(360deg)}}
+  h1{font-size:1.25rem;margin:0 0 8px;}
+  p{color:#6f6559;font-size:.96rem;line-height:1.6;margin:0;}
+  @media(prefers-reduced-motion:reduce){.sp{animation:none}}
+</style></head><body><div class="card">
+  <div class="sp"></div>
+  <h1>Estamos generando tu reporte</h1>
+  <p>El análisis detallado (tu sitio, tu competencia y el plan de acción) toma unos segundos.
+  Esta página se actualiza sola; también te llegará por correo.</p>
+</div></body></html>`;
+  return new Response(pendingHtml, {
+    status: 200,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
 } else {
-  // Fallback (tokens viejos sin resultado): regenerar con buildScan. Sin
-  // rate-limit ni passphrase — el token YA es la prueba de acceso.
+  // Sin resultado y token viejo (> 2.5 min): el background probablemente falló.
+  // Fallback: regenerar con buildScan. Sin rate-limit ni passphrase — el token
+  // YA es la prueba de acceso.
   try {
     const flow = await buildScan(env, 'report', {
       url: data.url,

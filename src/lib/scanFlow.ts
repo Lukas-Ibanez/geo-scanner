@@ -37,6 +37,12 @@ export interface ScanFlowParams {
    * aplicamos rate-limit (ya pasó por el unlock del UI).
    */
   accessAlreadyGranted?: boolean;
+  /**
+   * true para OMITIR la generación del informe detallado aunque el nivel sea
+   * 'detailed'. Lo usa el unlock para responder rápido con el puntaje base y
+   * generar el detallado (lento: Sonnet + competidores) en segundo plano.
+   */
+  skipDetailed?: boolean;
 }
 
 export interface ScanFlowResult {
@@ -162,7 +168,8 @@ export async function buildScan(
 
   // 5) Informe detallado (nivel 'detailed'). Si el base salió de caché, re-fetch
   // del sitio del cliente (el informe detallado necesita su contenido).
-  if (level === 'detailed') {
+  // skipDetailed lo omite: el unlock responde con el base y genera el detalle aparte.
+  if (level === 'detailed' && !params.skipDetailed) {
     if (!site || !signals) {
       site = await fetchSite(origin, url);
       signals = site.ok && site.html ? await parseHtml(site.html) : null;

@@ -72,6 +72,8 @@ let lastEmail = '';
 // Ya no construimos el link nosotros: si está, lo usamos tal cual; si no,
 // no mostramos el botón de PDF (el server no autorizó el detallado).
 let lastReportUrl: string | null = null;
+// Token del reporte detallado en curso (para hacer poll de su estado).
+let lastReportToken: string | null = null;
 
 // --- Estado de Turnstile ---
 // El widget entrega el token vía callback global. Lo guardamos acá para
@@ -276,14 +278,24 @@ async function runScan(
       renderError(output, msg);
       return;
     }
-    // El server puede devolver `reportUrl` (con token) si el usuario
-    // desbloqueó el detallado. Lo guardamos para el botón "Descargar PDF".
-    const responseObj = json as ScanResult & { reportUrl?: string };
-    if (responseObj.reportUrl) {
-      lastReportUrl = responseObj.reportUrl;
-    }
-    renderResult(output, json as ScanResult);
+    // El server puede devolver `reportUrl` + `reportToken` si el usuario
+    // desbloqueó el detallado. Con `detailedPending`, el informe se está
+    // generando en segundo plano: mostramos el base y hacemos poll hasta que
+    // esté listo.
+    const responseObj = json as ScanResult & {
+      reportUrl?: string;
+      reportToken?: string;
+      detailedPending?: boolean;
+    };
+    if (responseObj.reportUrl) lastReportUrl = responseObj.reportUrl;
+    lastReportToken = responseObj.reportToken || null;
+    renderResult(output, json as ScanResult, {
+      detailedPending: !!responseObj.detailedPending,
+    });
     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (responseObj.detailedPending && lastReportToken) {
+      pollDetailed(output, lastReportToken);
+    }
   } catch {
     stopLoading();
     if (!opts.unlock) {
@@ -429,7 +441,11 @@ function subscoreRow(label: string, val: number): HTMLElement {
   return row;
 }
 
-function renderResult(output: HTMLElement, r: ScanResult): void {
+function renderResult(
+  output: HTMLElement,
+  r: ScanResult,
+  opts?: { detailedPending?: boolean }
+): void {
   output.innerHTML = '';
   const card = el('div', 'result-card card');
 
@@ -517,10 +533,13 @@ function renderResult(output: HTMLElement, r: ScanResult): void {
     });
     card.appendChild(recs);
 
-    // --- Informe detallado (nivel 'detailed') — solo si la respuesta lo trae ---
+    // --- Informe detallado (nivel 'detailed') ---
     if (r.accessLevel === 'detailed' && r.detailedReport) {
       card.appendChild(renderDetailed(r.detailedReport));
       card.appendChild(renderPdfButton());
+    } else if (opts?.detailedPending) {
+      // El detallado se genera en segundo plano: placeholder que el poll rellena.
+      card.appendChild(renderDetailedPending());
     }
   } else if (r.locked) {
     card.appendChild(renderUnlock(output, r));
@@ -942,6 +961,69 @@ function renderCta(): HTMLElement {
   box.appendChild(p);
   box.appendChild(a);
   return box;
+}
+
+// Placeholder mientras el informe detallado se genera en segundo plano.
+// pollDetailed() lo reemplaza por el informe real cuando está listo.
+function renderDetailedPending(): HTMLElement {
+  const box = el('div', 'detailed-pending');
+  box.id = 'detailed-pending';
+  box.appendChild(el('div', 'dp-spinner'));
+  const t = el('p', 'dp-title');
+  t.textContent = 'Analizando tu sitio y tu competencia en profundidad…';
+  const s = el('p', 'dp-sub');
+  s.textContent =
+    'Esto toma unos segundos. El análisis profundo es más exigente, así que tu puntaje puede ajustarse. Te enviamos el informe completo a tu correo apenas esté listo, y aquí mismo aparecerá.';
+  box.appendChild(t);
+  box.appendChild(s);
+  return box;
+}
+
+// Hace poll de /api/report-status hasta que el detallado esté listo; entonces
+// re-renderiza el resultado completo (puntaje de Claude + informe + PDF). Si
+// tarda demasiado, muestra un aviso honesto (llega por correo / PDF).
+function pollDetailed(output: HTMLElement, token: string): void {
+  const INTERVAL = 4000;
+  const MAX_TRIES = 40; // ~2.7 min
+  let tries = 0;
+  const tick = async () => {
+    // Si el usuario lanzó otro escaneo, este poll ya no corresponde: cortar.
+    if (token !== lastReportToken) return;
+    tries++;
+    type StatusResp = { ready?: boolean; result?: ScanResult } | null;
+    let data: StatusResp = null;
+    try {
+      const res = await fetch('/api/report-status?token=' + encodeURIComponent(token), {
+        headers: { accept: 'application/json' },
+      });
+      data = (await res.json().catch(() => null)) as StatusResp;
+    } catch {
+      data = null;
+    }
+    if (token !== lastReportToken) return;
+    const box = document.getElementById('detailed-pending');
+    if (!box) return; // ya reemplazado / el usuario navegó
+
+    if (data && data.ready && data.result && data.result.detailedReport) {
+      // Re-render completo: el titular pasa a la nota de Claude y aparece el
+      // informe + botón PDF, todo consistente.
+      renderResult(output, data.result as ScanResult);
+      return;
+    }
+    if (tries >= MAX_TRIES) {
+      box.innerHTML = '';
+      const t = el('p', 'dp-title');
+      t.textContent = 'Tu informe está tardando un poco más de lo normal.';
+      const s = el('p', 'dp-sub');
+      s.textContent = 'Te llegará por correo en cuanto esté listo, y podrás abrirlo como PDF.';
+      box.appendChild(t);
+      box.appendChild(s);
+      if (lastReportUrl) box.appendChild(renderPdfButton());
+      return;
+    }
+    setTimeout(tick, INTERVAL);
+  };
+  setTimeout(tick, INTERVAL);
 }
 
 // --- Informe detallado (nivel 'detailed') — solo llega si el backend lo trae ---
