@@ -101,6 +101,9 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     // URL+competidores, y vence a los 7 días. /report valida el token.
     // La passphrase NUNCA sale del server — no aparece ni en la URL del mail
     // ni en los logs del browser/servidor.
+    // Guardamos TAMBIÉN el reporte ya computado (`projected`) bajo el token:
+    // así /report lo renderiza al instante en vez de regenerar el detallado
+    // (Sonnet + evaluar cada competidor con Claude, 20-40s) en cada apertura.
     let reportToken: string | undefined;
     let reportUrl: string | undefined;
     if (level === 'detailed') {
@@ -108,6 +111,7 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       await putReportToken(env.SCAN_CACHE, reportToken, {
         url: full.url,
         competitors,
+        result: projected,
       });
       const publicUrl = (env.PUBLIC_URL || 'https://geo.lukasibanez.dev').replace(/\/$/, '');
       reportUrl = `${publicUrl}/report?token=${reportToken}`;

@@ -42,6 +42,12 @@ export interface ReportTokenData {
   url: string;
   competitors: string[];
   createdAt: string;
+  /**
+   * Reporte YA computado en el desbloqueo. /report lo renderiza tal cual, sin
+   * regenerar el informe detallado (que cuesta 20-40s: Sonnet + evaluar cada
+   * competidor con Claude). Opcional para compatibilidad con tokens viejos.
+   */
+  result?: ScanResult;
 }
 
 export async function getReportToken(kv: KVNamespace, token: string): Promise<ReportTokenData | null> {
@@ -57,7 +63,7 @@ export async function getReportToken(kv: KVNamespace, token: string): Promise<Re
 export async function putReportToken(
   kv: KVNamespace,
   token: string,
-  data: { url: string; competitors: string[] },
+  data: { url: string; competitors: string[]; result?: ScanResult },
   ttlDays: number = 7
 ): Promise<void> {
   try {

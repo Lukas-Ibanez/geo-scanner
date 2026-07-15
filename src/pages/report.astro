@@ -8,11 +8,11 @@
 // competidores + TTL de 7 días. /report valida el token y rechaza si
 // falta, es inválido o venció. La passphrase NUNCA viaja en la URL.
 //
-// Internamente delega en buildScan (mismo flujo que /api/scan), por lo que el
-// reporte SIEMPRE refleja el último análisis disponible (sin caché — el
-// informe detallado nunca se cachea, y queremos datos frescos en un reporte
-// de pago).
-import type { SubScores, TechnicalCheck } from '../lib/types';
+// El token guarda el reporte YA computado (ver /api/scan): /report lo renderiza
+// al instante, sin regenerar el informe detallado (Sonnet + evaluar cada
+// competidor con Claude, 20-40s). Solo cae a buildScan como fallback para
+// tokens viejos que no traen el resultado cacheado.
+import type { SubScores, TechnicalCheck, ScanResult } from '../lib/types';
 import { buildScan, ScanError } from '../lib/scanFlow';
 import { getReportToken } from '../lib/cache';
 import '../styles/report.css';
@@ -26,55 +26,52 @@ const env = Astro.locals.runtime.env;
 // Acceso por token (preferido). La passphrase ya NO se acepta en la URL —
 // el server la valida una vez en /api/scan y emite un token opaco.
 const token = params.get('token');
-let url: string;
-let email: string | null = null;
-let competitors: string[];
-
-if (token) {
-  const data = await getReportToken(env.SCAN_CACHE, token);
-  if (!data) {
-    return new Response(
-      'El enlace del reporte venció o no es válido. Vuelve a hacer el escaneo desde la página principal para generar uno nuevo.',
-      { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } }
-    );
-  }
-  url = data.url;
-  competitors = data.competitors;
-} else {
+if (!token) {
   return new Response(
     'Falta el token de acceso. Abre el reporte desde el enlace que te llegó por correo.',
     { status: 400, headers: { 'content-type': 'text/plain; charset=utf-8' } }
   );
 }
 
-// Reusamos buildScan (mismo flujo que el endpoint). Para el reporte NO
-// aplicamos rate-limit ni re-validamos la passphrase — el token YA es
-// la prueba de acceso. `accessAlreadyGranted: true` fuerza level='detailed'.
-let flow;
-try {
-  flow = await buildScan(env, 'report', {
-    url,
-    email,
-    passphrase: null,
-    competitors,
-    accessAlreadyGranted: true,
-  });
-} catch (err) {
-  if (err instanceof ScanError) {
-    return new Response(err.userMessage, {
-      status: err.status,
-      headers: { 'content-type': 'text/plain; charset=utf-8' },
-    });
-  }
-  throw err;
-}
-
-const { result: r, level } = flow;
-if (level !== 'detailed') {
+const data = await getReportToken(env.SCAN_CACHE, token);
+if (!data) {
   return new Response(
-    'Necesitas el código de acceso para ver el reporte detallado. Pídelo al dueño del sitio.',
+    'El enlace del reporte venció o no es válido. Vuelve a hacer el escaneo desde la página principal para generar uno nuevo.',
     { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } }
   );
+}
+
+let r: ScanResult;
+if (data.result) {
+  // Camino rápido: el reporte ya está computado en el token → render instantáneo.
+  r = data.result;
+} else {
+  // Fallback (tokens viejos sin resultado): regenerar con buildScan. Sin
+  // rate-limit ni passphrase — el token YA es la prueba de acceso.
+  try {
+    const flow = await buildScan(env, 'report', {
+      url: data.url,
+      email: null,
+      passphrase: null,
+      competitors: data.competitors,
+      accessAlreadyGranted: true,
+    });
+    if (flow.level !== 'detailed') {
+      return new Response(
+        'Necesitas el código de acceso para ver el reporte detallado. Pídelo al dueño del sitio.',
+        { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } }
+      );
+    }
+    r = flow.result;
+  } catch (err) {
+    if (err instanceof ScanError) {
+      return new Response(err.userMessage, {
+        status: err.status,
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+    }
+    throw err;
+  }
 }
 
 // Helpers locales (no los necesitamos en el bundle del cliente, solo aquí).
