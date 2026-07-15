@@ -102,6 +102,8 @@ a:hover {
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
+  /* Deriva lenta: el fondo "respira" sin distraer. Se desactiva con reduce-motion. */
+  will-change: transform;
 }
 .blob-1 {
   width: 560px;
@@ -110,6 +112,7 @@ a:hover {
   opacity: 0.5;
   top: -180px;
   left: -140px;
+  animation: drift-a 22s ease-in-out infinite;
 }
 .blob-2 {
   width: 480px;
@@ -118,6 +121,7 @@ a:hover {
   opacity: 0.55;
   top: -90px;
   right: -150px;
+  animation: drift-b 26s ease-in-out infinite;
 }
 .blob-3 {
   width: 420px;
@@ -126,6 +130,35 @@ a:hover {
   opacity: 0.28;
   top: 420px;
   left: 45%;
+  animation: drift-c 30s ease-in-out infinite;
+}
+@keyframes drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 30px) scale(1.06); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-36px, 24px) scale(1.08); }
+}
+@keyframes drift-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(28px, -30px) scale(0.94); }
+}
+
+/* ---------- Scroll reveal (aparición al hacer scroll) ---------- */
+/* Solo activo cuando el JS marcó .anim-ready en <html>: sin JS, todo visible. */
+.anim-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--d, 0ms);
+  will-change: opacity, transform;
+}
+.anim-ready [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
 }
 
 /* ---------- Header (legacy single-page) ---------- */
@@ -735,6 +768,128 @@ a:hover {
 }
 .author-trust a {
   font-weight: 600;
+}
+
+/* ---------- Demo de IA en el hero (visualización "así te cita una IA") ---------- */
+.ai-demo {
+  max-width: 560px;
+  margin: 40px auto 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  text-align: left;
+}
+.ai-demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--peach-100), transparent);
+}
+.ai-demo-bar .ai-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+.ai-demo-bar .ai-dot:nth-child(1) { background: #f0a58c; }
+.ai-demo-bar .ai-dot:nth-child(2) { background: var(--peach-300); }
+.ai-demo-bar .ai-dot:nth-child(3) { background: var(--blue-200); }
+.ai-demo-label {
+  margin-left: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ai-demo-chat {
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 176px;
+}
+.ai-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ai-msg-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ai-msg-user .ai-msg-tag { color: var(--blue-700); }
+.ai-msg-bot .ai-msg-tag { color: var(--peach-500); }
+.ai-bubble {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 11px 15px;
+  border-radius: 14px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.ai-msg-user .ai-bubble {
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  border-bottom-left-radius: 4px;
+}
+.ai-msg-bot .ai-bubble {
+  background: var(--peach-100);
+  border: 1px solid var(--peach-200);
+  border-bottom-left-radius: 4px;
+}
+/* Caret parpadeante mientras "escribe" */
+.ai-typed::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -0.18em;
+  background: currentColor;
+  opacity: 0;
+}
+.ai-typed.is-typing::after {
+  opacity: 0.7;
+  animation: caret 0.9s steps(1) infinite;
+}
+@keyframes caret {
+  50% { opacity: 0; }
+}
+/* Chip de cita que aparece al final de la respuesta */
+.ai-cite {
+  align-self: flex-start;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--peach-200);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--peach-500);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.4s, transform 0.4s;
+}
+.ai-cite.is-in {
+  opacity: 1;
+  transform: none;
+}
+.ai-cite::before {
+  content: '🔗';
+  font-size: 0.82rem;
 }
 
 /* ---------- Sections ---------- */
@@ -1660,6 +1815,12 @@ a:hover {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Nada de aparecer/ocultar: todo el contenido visible de una. */
+  .anim-ready [data-reveal],
+  .ai-cite {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

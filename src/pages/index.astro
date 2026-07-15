@@ -188,14 +188,14 @@ const jsonLd = {
     <!-- ===== Hero ===== -->
     <section class="hero">
       <div class="container">
-        <span class="eyebrow"><span class="pulse"></span> Optimización para buscadores con IA (GEO)</span>
-        <h1>¿Te encuentran <span class="grad">las IA</span> cuando alguien busca lo que vendes?</h1>
-        <p class="lead">
+        <span class="eyebrow" data-reveal><span class="pulse"></span> Optimización para buscadores con IA (GEO)</span>
+        <h1 data-reveal style="--d:70ms">¿Te encuentran <span class="grad">las IA</span> cuando alguien busca lo que vendes?</h1>
+        <p class="lead" data-reveal style="--d:140ms">
           Escanea tu sitio gratis y descubre qué tan preparado está para aparecer en ChatGPT,
           Perplexity, Gemini y Google AI — con un puntaje claro y qué mejorar, sin tecnicismos.
         </p>
 
-        <div class="hero-cta">
+        <div class="hero-cta" data-reveal style="--d:210ms">
           <a class="btn btn-primary btn-lg" href="/scan">
             Escanear mi sitio gratis
             <span class="arrow" aria-hidden="true">→</span>
@@ -203,7 +203,7 @@ const jsonLd = {
           <a class="btn btn-ghost" href="#how">Ver cómo funciona</a>
         </div>
 
-        <ul class="trust">
+        <ul class="trust" data-reveal style="--d:280ms">
           <li class="chk">✓ Gratis</li>
           <li class="sep">·</li>
           <li class="chk">✓ En segundos</li>
@@ -218,7 +218,26 @@ const jsonLd = {
           </li>
         </ul>
 
-        <p class="author-trust">
+        <!-- Demo animado: cómo una IA "cita tu negocio" cuando tu sitio está listo -->
+        <div class="ai-demo" data-reveal style="--d:350ms" aria-hidden="true">
+          <div class="ai-demo-bar">
+            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+            <span class="ai-demo-label">Ejemplo · cómo te cita una IA</span>
+          </div>
+          <div class="ai-demo-chat">
+            <div class="ai-msg ai-msg-user">
+              <span class="ai-msg-tag">Alguien le pregunta a la IA</span>
+              <p class="ai-bubble"><span class="ai-typed" id="ai-demo-q"></span></p>
+            </div>
+            <div class="ai-msg ai-msg-bot">
+              <span class="ai-msg-tag">La IA responde</span>
+              <p class="ai-bubble"><span class="ai-typed" id="ai-demo-a"></span></p>
+              <span class="ai-cite" id="ai-demo-cite"></span>
+            </div>
+          </div>
+        </div>
+
+        <p class="author-trust" data-reveal style="--d:420ms">
           Hecho en Chile por <a href={AUTHOR_URL} rel="author">Lukas Ibáñez</a>, desarrollador web con
           experiencia real en infraestructura, SEO y sitios en producción —
           los mismos fundamentos con que se construyó esta herramienta. Pensada para negocios de
@@ -230,7 +249,7 @@ const jsonLd = {
     <!-- ===== Features (Qué es) ===== -->
     <section class="section" id="features">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Qué obtienes</span>
           <h2>Una auditoría completa en segundos</h2>
           <p class="sub">Cuatro bloques de análisis que combinados te dicen exactamente qué tan visible eres para las IA.</p>
@@ -239,7 +258,7 @@ const jsonLd = {
         <div class="features-grid">
           {
             features.map((f) => (
-              <article class="feature card">
+              <article class="feature card" data-reveal>
                 <span class="feature-ico" aria-hidden="true">{f.icon}</span>
                 <h3>{f.title}</h3>
                 <p>{f.body}</p>
@@ -257,13 +276,13 @@ const jsonLd = {
     <!-- ===== Mockup preview del informe ===== -->
     <section class="section section-alt">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Así se ve</span>
           <h2>Tu informe, en una sola pantalla</h2>
           <p class="sub">Un puntaje claro, las dimensiones evaluadas y un plan de acción concreto. Esto es un ejemplo.</p>
         </div>
 
-        <div class="preview-card card" aria-hidden="true">
+        <div class="preview-card card" data-reveal aria-hidden="true">
           <span class="preview-tag">Ejemplo</span>
           <div class="preview-top">
             <div class="preview-gauge">
@@ -313,23 +332,23 @@ const jsonLd = {
     <!-- ===== Cómo funciona ===== -->
     <section class="section" id="how">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Cómo funciona</span>
           <h2>Tres pasos, sin instalar nada</h2>
           <p class="sub">De tu URL al diagnóstico completo en menos de un minuto.</p>
         </div>
         <div class="steps">
-          <article class="step card">
+          <article class="step card" data-reveal>
             <span class="num">1</span>
             <h3>Pega tu dirección</h3>
             <p>Escribe la web de tu negocio, confirma que eres humano con un clic y listo.</p>
           </article>
-          <article class="step card">
+          <article class="step card" data-reveal>
             <span class="num">2</span>
             <h3>Analizamos como una IA</h3>
             <p>Revisamos si las IA pueden leerte, entender qué ofreces y dónde operas.</p>
           </article>
-          <article class="step card">
+          <article class="step card" data-reveal>
             <span class="num">3</span>
             <h3>Recibe tu plan</h3>
             <p>Un puntaje claro y recomendaciones concretas, en lenguaje de negocio.</p>
@@ -341,7 +360,7 @@ const jsonLd = {
     <!-- ===== Para quién es ===== -->
     <section class="section section-alt" id="industries">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Para quién es</span>
           <h2>Cualquier negocio que quiera ser recomendado por las IA</h2>
           <p class="sub">Algunos ejemplos de quién se beneficia hoy de aparecer en respuestas de IA.</p>
@@ -349,7 +368,7 @@ const jsonLd = {
         <div class="industries">
           {
             industries.map((it) => (
-              <article class="industry card">
+              <article class="industry card" data-reveal>
                 <h3>{it.title}</h3>
                 <p class="who">{it.who}</p>
                 <p class="how">{it.how}</p>
@@ -363,7 +382,7 @@ const jsonLd = {
     <!-- ===== Metodología ===== -->
     <section class="section" id="method">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Metodología</span>
           <h2>Cómo calculamos tu puntaje</h2>
           <p class="sub">
@@ -372,7 +391,7 @@ const jsonLd = {
           </p>
         </div>
         <div class="method">
-          <article class="method-card card">
+          <article class="method-card card" data-reveal>
             <div class="method-head">
               <h3>Análisis técnico</h3>
               <span class="method-weight">40%</span>
@@ -394,7 +413,7 @@ const jsonLd = {
             </p>
           </article>
 
-          <article class="method-card card">
+          <article class="method-card card" data-reveal>
             <div class="method-head">
               <h3>Análisis de contenido (IA)</h3>
               <span class="method-weight">60%</span>
@@ -421,7 +440,7 @@ const jsonLd = {
     <!-- ===== Por qué confiar ===== -->
     <section class="section" id="confianza">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Por qué confiar</span>
           <h2>Un diagnóstico que puedes auditar tú mismo</h2>
           <p class="sub">
@@ -430,7 +449,7 @@ const jsonLd = {
         </div>
 
         <div class="features-grid">
-          <article class="feature card">
+          <article class="feature card" data-reveal>
             <span class="feature-ico" aria-hidden="true">🔓</span>
             <h3>Código abierto</h3>
             <p>
@@ -438,7 +457,7 @@ const jsonLd = {
               revisar exactamente cómo se calcula tu puntaje — sin secretos ni humo.
             </p>
           </article>
-          <article class="feature card">
+          <article class="feature card" data-reveal>
             <span class="feature-ico" aria-hidden="true">🎯</span>
             <h3>Puntaje reproducible</h3>
             <p>
@@ -446,7 +465,7 @@ const jsonLd = {
               no contra una opinión que cambia cada vez.
             </p>
           </article>
-          <article class="feature card">
+          <article class="feature card" data-reveal>
             <span class="feature-ico" aria-hidden="true">🔒</span>
             <h3>Tus datos son tuyos</h3>
             <p>
@@ -454,7 +473,7 @@ const jsonLd = {
               ni vendemos tu información a nadie.
             </p>
           </article>
-          <article class="feature card">
+          <article class="feature card" data-reveal>
             <span class="feature-ico" aria-hidden="true">🤝</span>
             <h3>Hecho por un dev real</h3>
             <p>
@@ -492,7 +511,7 @@ const jsonLd = {
     <!-- ===== Reporte premium ===== -->
     <section class="section premium" id="premium">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">Reporte premium</span>
           <h2>El análisis completo, con plan de acción y competencia</h2>
           <p class="sub">
@@ -501,7 +520,7 @@ const jsonLd = {
           </p>
         </div>
 
-        <div class="premium-card card">
+        <div class="premium-card card" data-reveal>
           <div class="premium-includes">
             <h3>Qué incluye</h3>
             <ul>
@@ -541,7 +560,7 @@ const jsonLd = {
     <!-- ===== FAQ ===== -->
     <section class="section section-alt" id="faq">
       <div class="container">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <span class="section-kicker">FAQ</span>
           <h2>Preguntas frecuentes</h2>
           <p class="sub">Lo que la gente suele preguntar sobre GEO y esta herramienta.</p>
@@ -549,7 +568,7 @@ const jsonLd = {
         <div class="faq">
           {
             faqs.map((f) => (
-              <details class="faq-item">
+              <details class="faq-item" data-reveal>
                 <summary>{f.q}</summary>
                 <p>{f.a}</p>
               </details>
@@ -567,4 +586,8 @@ const jsonLd = {
       </div>
     </section>
   </main>
+
+  <script>
+    import '../scripts/landing.ts';
+  </script>
 </Base>

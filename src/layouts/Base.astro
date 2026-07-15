@@ -48,6 +48,18 @@ const canonical = new URL(Astro.url.pathname, site).toString();
       rel="stylesheet"
     />
     <slot name="head" />
+    {
+      active === 'home' && (
+        <script is:inline>
+          {`document.documentElement.classList.add('anim-ready');
+          setTimeout(function () {
+            if (!window.__landingReady) {
+              document.querySelectorAll('[data-reveal]').forEach(function (el) { el.classList.add('is-in'); });
+            }
+          }, 2500);`}
+        </script>
+      )
+    }
   </head>
   <body data-page={active}>
     <!-- blobs pastel de fondo (decorativos) -->
