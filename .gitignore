@@ -10,6 +10,11 @@ dist/
 .env
 .env.*
 
+# archivos temporales de prueba (payloads, respuestas, scripts sueltos)
+tmp-*
+resp*.html
+deployed*.html
+
 # deps
 node_modules/
 

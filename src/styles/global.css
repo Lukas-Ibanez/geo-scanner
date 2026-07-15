@@ -1,42 +1,45 @@
 /* ===== GEO Scanner — estilos globales =====
-   Estética clara y cálida: azul + durazno pastel, mucho aire, tarjetas
-   redondeadas, tipografía Inter, micro-animaciones suaves. */
+   Estética cálida y de confianza: fondo crema + azul refinado (marca) +
+   terracota/arcilla de acento — misma familia que lukasibanez.dev. Mucho aire,
+   tarjetas blancas que resaltan sobre el crema, tipografía Inter. */
 
 :root {
-  /* azul (marca) */
-  --blue-50: #eef3ff;
-  --blue-100: #dde7ff;
-  --blue-200: #bcd0ff;
-  --blue-400: #6b95ff;
-  --blue-500: #4f7cff;
+  /* azul (marca) — color principal; se mantiene para transmitir confianza,
+     refinado apenas para asentar sobre el fondo crema */
+  --blue-50: #edf1fb;
+  --blue-100: #dce4f6;
+  --blue-200: #bccdf1;
+  --blue-400: #6b90ef;
+  --blue-500: #4f78f0;
   --blue-600: #3b63ec;
   --blue-700: #2f4fc7;
 
-  /* durazno (acento cálido) */
-  --peach-100: #fff3e6;
-  --peach-200: #ffe2c2;
-  --peach-300: #ffcd97;
-  --peach-400: #ffb066;
-  --peach-500: #ff9b45;
+  /* terracota / arcilla (acento cálido) — tomado de lukasibanez.dev.
+     Mantiene el nombre --peach por compatibilidad, pero la familia es arcilla. */
+  --peach-100: #fbf1ea;
+  --peach-200: #f2ddd0;
+  --peach-300: #e5bfa6;
+  --peach-400: #d48e76;
+  --peach-500: #bf7a61;
 
-  /* neutros */
-  --ink: #15203a;
-  --muted: #64708a;
-  --line: #e7ecf6;
-  --bg: #f9fbff;
+  /* neutros cálidos (antes azulados) */
+  --ink: #241f1b;
+  --muted: #6f6559;
+  --line: #ece5da;
+  --bg: #f7f4ee;
   --card: #ffffff;
 
-  /* semáforo de puntaje */
+  /* semáforo de puntaje — el ámbar se mantiene bien diferenciado del terracota */
   --good: #19a974;
-  --mid: #f5a524;
-  --bad: #ef4444;
+  --mid: #e8920f;
+  --bad: #e23d3d;
 
   --radius: 24px;
   --radius-md: 18px;
   --radius-sm: 12px;
-  --shadow-sm: 0 4px 16px rgba(28, 51, 110, 0.06);
-  --shadow: 0 18px 48px rgba(28, 51, 110, 0.1);
-  --shadow-lg: 0 30px 70px rgba(28, 51, 110, 0.14);
+  --shadow-sm: 0 4px 16px rgba(60, 45, 30, 0.06);
+  --shadow: 0 18px 48px rgba(60, 45, 30, 0.1);
+  --shadow-lg: 0 30px 70px rgba(60, 45, 30, 0.14);
   --maxw: 1120px;
   --nav-h: 72px;
 
@@ -119,8 +122,8 @@ a:hover {
 .blob-3 {
   width: 420px;
   height: 420px;
-  background: #e7dbff;
-  opacity: 0.35;
+  background: var(--peach-300);
+  opacity: 0.28;
   top: 420px;
   left: 45%;
 }
@@ -171,10 +174,10 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(249, 251, 255, 0.85);
+  background: rgba(247, 244, 238, 0.85);
   backdrop-filter: saturate(180%) blur(14px);
   -webkit-backdrop-filter: saturate(180%) blur(14px);
-  border-bottom: 1px solid rgba(231, 236, 246, 0.7);
+  border-bottom: 1px solid rgba(236, 229, 218, 0.7);
 }
 .site-nav-inner {
   display: flex;
@@ -273,7 +276,7 @@ a:hover {
   margin-top: 64px;
   padding: 48px 0 28px;
   border-top: 1px solid var(--line);
-  background: linear-gradient(180deg, transparent, var(--blue-50) 60%);
+  background: linear-gradient(180deg, transparent, var(--peach-100) 60%);
   color: var(--muted);
   font-size: 0.92rem;
 }
@@ -442,7 +445,7 @@ a:hover {
   font-size: 1.02rem;
 }
 .section-alt {
-  background: linear-gradient(180deg, transparent, var(--blue-50) 30%, transparent);
+  background: linear-gradient(180deg, transparent, var(--peach-100) 30%, transparent);
   border-radius: 0;
 }
 
@@ -494,7 +497,7 @@ a:hover {
 
 /* ---------- Reporte premium (landing) ---------- */
 .premium {
-  background: linear-gradient(180deg, transparent, var(--blue-50) 40%, transparent);
+  background: linear-gradient(180deg, transparent, var(--peach-100) 40%, transparent);
 }
 .premium-card {
   display: grid;
@@ -782,7 +785,7 @@ a:hover {
 }
 .step:nth-child(2) .num {
   background: linear-gradient(135deg, var(--peach-400), var(--peach-500));
-  box-shadow: 0 10px 22px rgba(255, 155, 69, 0.32);
+  box-shadow: 0 10px 22px rgba(191, 122, 97, 0.32);
 }
 .step:nth-child(3) .num {
   background: linear-gradient(135deg, var(--good), #14b8a6);
@@ -1458,7 +1461,7 @@ a:hover {
 .scan-faq {
   padding: 48px 0 24px;
   border-top: 1px solid var(--line);
-  background: linear-gradient(180deg, transparent, var(--blue-50) 100%);
+  background: linear-gradient(180deg, transparent, var(--peach-100) 100%);
 }
 .scan-faq h2 {
   text-align: center;
@@ -1696,7 +1699,7 @@ a:hover {
   padding: 14px;
   border: 1px dashed var(--line);
   border-radius: var(--radius-sm);
-  background: #f9fbff;
+  background: var(--bg);
 }
 
 /* Estado de validación de la passphrase. Aparece debajo del input. */
