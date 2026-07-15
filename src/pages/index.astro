@@ -418,6 +418,77 @@ const jsonLd = {
       </div>
     </section>
 
+    <!-- ===== Por qué confiar ===== -->
+    <section class="section" id="confianza">
+      <div class="container">
+        <div class="section-head">
+          <span class="section-kicker">Por qué confiar</span>
+          <h2>Un diagnóstico que puedes auditar tú mismo</h2>
+          <p class="sub">
+            No te pedimos que creas en una caja negra. Esto es lo que hace que el análisis sea confiable.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <article class="feature card">
+            <span class="feature-ico" aria-hidden="true">🔓</span>
+            <h3>Código abierto</h3>
+            <p>
+              Todo el análisis está publicado en <a href={GITHUB_URL} rel="me">GitHub</a>. Puedes
+              revisar exactamente cómo se calcula tu puntaje — sin secretos ni humo.
+            </p>
+          </article>
+          <article class="feature card">
+            <span class="feature-ico" aria-hidden="true">🎯</span>
+            <h3>Puntaje reproducible</h3>
+            <p>
+              Mismo sitio, mismo número. Cada dimensión se mide contra criterios explícitos,
+              no contra una opinión que cambia cada vez.
+            </p>
+          </article>
+          <article class="feature card">
+            <span class="feature-ico" aria-hidden="true">🔒</span>
+            <h3>Tus datos son tuyos</h3>
+            <p>
+              Solo pedimos tu correo para enviarte el informe. No creamos cuentas, ni compartimos
+              ni vendemos tu información a nadie.
+            </p>
+          </article>
+          <article class="feature card">
+            <span class="feature-ico" aria-hidden="true">🤝</span>
+            <h3>Hecho por un dev real</h3>
+            <p>
+              Detrás está <a href={AUTHOR_URL} rel="author">Lukas Ibáñez</a>, con experiencia real en
+              infraestructura, SEO y sitios en producción — no una agencia anónima ni un bot.
+            </p>
+          </article>
+        </div>
+
+        {/*
+          ===== TESTIMONIOS (scaffold listo para cuando tengas reseñas REALES) =====
+          Descomenta este bloque y reemplaza el contenido de `testimonials` (arriba,
+          en el frontmatter) con frases de clientes reales que autorizaron mostrarlas.
+          NO inventar testimonios: la prueba social falsa destruye la confianza si se
+          descubre. Estructura sugerida en el array:
+            const testimonials = [
+              { quote: 'Frase textual del cliente.', name: 'Nombre Apellido', role: 'Cargo, Empresa' },
+            ];
+
+          <div class="testimonials">
+            {testimonials.map((t) => (
+              <figure class="testimonial card">
+                <blockquote>{t.quote}</blockquote>
+                <figcaption>
+                  <strong>{t.name}</strong>
+                  <span>{t.role}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        */}
+      </div>
+    </section>
+
     <!-- ===== Reporte premium ===== -->
     <section class="section premium" id="premium">
       <div class="container">
