@@ -106,19 +106,19 @@ async function finalizeCandidates(raw: unknown[]): Promise<SuggestedCompetitor[]
   }
   if (!candidates.length) return [];
 
-  // 2) Probe en paralelo: cada dominio se prueba https (y cae a http si hace
-  // falta). Mantenemos solo los primeros MAX_RETURNED que respondan.
+  // 2) Probe en paralelo, pero NO destructivo: el probe corre desde el Worker,
+  // así que un competidor válido detrás de Cloudflare (orange-to-orange) o que
+  // bloquea bots falla el probe aunque exista. Por eso ordenamos los alcanzables
+  // primero y RELLENAMOS con el resto hasta MAX_RETURNED, en vez de descartarlos
+  // (el reporte ya maneja con gracia los que no se puedan leer). Así el usuario
+  // siempre ve una lista útil en vez de una casi vacía.
   const probed = await Promise.all(
-    candidates.map(async (c) => ({ c, origin: await originFor(c.domain) }))
+    candidates.map(async (c) => ({ c, reachable: (await originFor(c.domain)) !== null }))
   );
 
-  const out: SuggestedCompetitor[] = [];
-  for (const { c, origin } of probed) {
-    if (!origin) continue; // caído / inexistente / no responde -> fuera
-    out.push(c);
-    if (out.length >= MAX_RETURNED) break;
-  }
-  return out;
+  const reachable = probed.filter((p) => p.reachable).map((p) => p.c);
+  const unreachable = probed.filter((p) => !p.reachable).map((p) => p.c);
+  return [...reachable, ...unreachable].slice(0, MAX_RETURNED);
 }
 
 async function suggestFromSignals(
@@ -150,31 +150,41 @@ Devuelve entre 5 y 8 competidores REALES del mismo nicho con su dominio y razón
   return finalizeCandidates(input.competitors as unknown[]);
 }
 
-// Estrategia principal: 1 llamada a Gemini con `googleSearch` + contexto de
-// signals (cuando esté disponible). La herramienta de búsqueda bypassea el
-// orange-to-orange del Worker (porque Google hace el fetch desde su red), y
-// aun cuando NO hay orange-to-orange, googleSearch añade reseñas/comparativas
-// que mejoran la calidad de los competidores propuestos.
-async function suggestViaSearch(
-  url: string,
-  env: Env,
-  signals: SiteSignals | null
-): Promise<SuggestedCompetitor[]> {
-  const signalBlock =
-    signals && (signals.mainText?.length ?? 0) >= MIN_MAIN_TEXT_CHARS
-      ? `\nContexto adicional leído del HTML del sitio (para que tengas una primera lectura rápida antes de salir a Google a buscar):\n- Título: ${signals.title || '(sin título)'}\n- Meta descripción: ${signals.metaDescription || '(sin descripción)'}\n- H1: ${signals.h1[0] || '(sin h1)'}\n- Primeros ${MIN_MAIN_TEXT_CHARS}+ chars del contenido: """${signals.mainText.slice(0, 600)}"""\n`
-      : `\n(El Worker NO pudo leer este sitio directamente, probablemente porque está detrás de Cloudflare — orange-to-orange. Confía solo en Google Search.)\n`;
+// Fallback cuando el Worker NO pudo leer el sitio (orange-to-orange, bloqueo de
+// bots, etc.): sin `signals`, le damos a Gemini la URL/dominio y dejamos que
+// infiera el rubro con su propio conocimiento. Sale del país por el TLD (.cl,
+// .ar, etc.) para sesgar hacia competidores del mercado local.
+// NO usa googleSearch: el grounding con Google Search tiene cuota aparte y
+// devuelve 429 en el free tier, lo que dejaba la sugerencia SIEMPRE vacía.
+function countryHint(domain: string): string {
+  const tld = domain.split('.').pop() || '';
+  const map: Record<string, string> = {
+    cl: 'Chile',
+    ar: 'Argentina',
+    mx: 'México',
+    co: 'Colombia',
+    pe: 'Perú',
+    es: 'España',
+    uy: 'Uruguay',
+    ec: 'Ecuador',
+  };
+  return map[tld] ? ` El negocio opera en ${map[tld]} (dominio .${tld}); prioriza competidores de ese mercado.` : '';
+}
 
-  const userPrompt = `Sitio: ${url}
-${signalBlock}
-Usa Google Search para entender qué hace este sitio y proponer 5-8 competidores REALES del mismo nicho/rubro. Devuelve su dominio limpio y una razón corta en lenguaje de negocio. Si el HTML local es pobre, hazte fuerte de la búsqueda.`;
+async function suggestFromUrl(url: string, env: Env): Promise<SuggestedCompetitor[]> {
+  const domain = normalizeDomain(url) || url;
+  const userPrompt = `No pudimos leer el contenido del sitio directamente. Deduce a qué se dedica a partir de su dirección y de lo que sepas de él.
+
+Sitio: ${url}
+Dominio: ${domain}${countryHint(domain)}
+
+Propón entre 5 y 8 competidores REALES del mismo rubro y mercado, con su dominio limpio y una razón corta en lenguaje de negocio. Si no estás seguro del rubro exacto, apuesta por la interpretación más probable del dominio y NO devuelvas una lista vacía.`;
 
   const input = await callGeminiTool<{ competitors?: unknown }>({
     system: SYSTEM,
     userPrompt,
     responseSchema: RESPONSE_SCHEMA,
     env,
-    tools: [{ googleSearch: {} }],
   });
 
   if (!input || !Array.isArray(input.competitors)) return [];
@@ -185,12 +195,10 @@ export async function suggestCompetitors(
   input: { signals?: SiteSignals | null; url: string },
   env: Env
 ): Promise<SuggestedCompetitor[]> {
-  // Una sola llamada a Gemini, SIEMPRE con googleSearch + signals como
-  // contexto cuando estén disponibles. Razones:
-  //  - googleSearch bypassea el orange-to-orange (Google hace el fetch).
-  //  - googleSearch mejora la calidad de competidores incluso cuando el
-  //    Worker pudo leer el HTML (más contexto: reseñas, comparativas,
-  //    menciones en listados de mercado).
-  //  - 1 sola call a Gemini → no duplica cuota.
-  return suggestViaSearch(input.url, env, input.signals ?? null);
+  // Salida estructurada SIN googleSearch (el grounding da 429 en el free tier
+  // y dejaba esto siempre vacío). Si leímos el sitio, usamos su contenido;
+  // si no, inferimos el rubro desde la URL/dominio.
+  const signals = input.signals ?? null;
+  const hasContent = !!signals && (signals.mainText?.length ?? 0) >= MIN_MAIN_TEXT_CHARS;
+  return hasContent ? suggestFromSignals(signals as SiteSignals, env) : suggestFromUrl(input.url, env);
 }
