@@ -28,10 +28,11 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
   try {
     const env = locals.runtime.env;
 
-    let payload: { url?: unknown; 'cf-turnstile-response'?: unknown };
+    let payload: { url?: unknown; phase?: unknown; 'cf-turnstile-response'?: unknown };
     try {
       payload = (await request.json()) as {
         url?: unknown;
+        phase?: unknown;
         'cf-turnstile-response'?: unknown;
       };
     } catch {
@@ -46,11 +47,11 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
     const phase = payload?.phase === 'scan' ? 'scan' : 'unlock';
     if (phase === 'scan') {
-      const turn = await verifyTurnstile(
-        env.TURNSTILE_SECRET,
-        payload?.['cf-turnstile-response'],
-        ip
-      );
+      const turnstileToken =
+        typeof payload?.['cf-turnstile-response'] === 'string'
+          ? payload['cf-turnstile-response']
+          : undefined;
+      const turn = await verifyTurnstile(env.TURNSTILE_SECRET, turnstileToken, ip);
       if (!turn.success) {
         return json(
           { error: turn.error || 'Verificación anti-bot falló. Inténtalo de nuevo.' },
