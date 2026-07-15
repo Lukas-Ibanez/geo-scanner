@@ -505,7 +505,9 @@ export function renderHtml(result: ScanResult, ctaUrl: string, reportUrl: string
         ${techSection}
 
         ${
-          recs
+          // Si el informe detallado trae su propio plan de acción (Claude), no
+          // mostramos también el plan base (Gemini): serían dos planes distintos.
+          recs && !(result.detailedReport?.actionPlan && result.detailedReport.actionPlan.length)
             ? `<tr><td style="padding:28px 28px 4px;">
                  <h2 style="margin:0 0 4px;font-size:18px;">Plan de mejoras priorizado</h2>
                  <p style="margin:0 0 16px;font-size:13px;line-height:1.5;color:#64708a;">Empieza por arriba: están ordenadas por el impacto que tienen en tu visibilidad ante las IA.</p>
@@ -568,7 +570,10 @@ function renderText(result: ScanResult, ctaUrl: string, reportUrl: string): stri
     }
   }
 
-  if (result.recommendations && result.recommendations.length) {
+  // Si el detallado trae su propio plan de acción (Claude), omitimos el plan
+  // base (Gemini) para no mostrar dos planes distintos.
+  const hasDetailedPlan = !!(result.detailedReport?.actionPlan && result.detailedReport.actionPlan.length);
+  if (result.recommendations && result.recommendations.length && !hasDetailedPlan) {
     lines.push('', 'PLAN DE MEJORAS PRIORIZADO (ordenado por impacto)');
     result.recommendations.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
   }

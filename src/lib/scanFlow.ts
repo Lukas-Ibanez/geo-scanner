@@ -160,26 +160,39 @@ export async function buildScan(
     full = { ...full, fromCache: true };
   }
 
-  // 5) Informe detallado (nivel 'detailed'). Nunca se cachea: depende de los
-  // competidores del cliente. Si el base salió de caché, re-fetch del sitio
-  // del cliente (el informe detallado necesita su contenido).
+  // 5) Informe detallado (nivel 'detailed'). Si el base salió de caché, re-fetch
+  // del sitio del cliente (el informe detallado necesita su contenido).
   if (level === 'detailed') {
     if (!site || !signals) {
       site = await fetchSite(origin, url);
       signals = site.ok && site.html ? await parseHtml(site.html) : null;
     }
-    full = {
-      ...full,
-      detailedReport:
-        site && signals
-          ? await buildDetailedReport({
-              signals,
-              site,
-              competitors: params.competitors || [],
-              env,
-            })
-          : null,
-    };
+    if (site && signals) {
+      const detailed = await buildDetailedReport({
+        signals,
+        site,
+        competitors: params.competitors || [],
+        env,
+      });
+      full = { ...full, detailedReport: detailed.report };
+      // El reporte pagado usa la evaluación de Claude (misma vara que los
+      // competidores) como puntaje canónico: así el TITULAR y las DIMENSIONES
+      // coinciden con la comparativa y con la prosa del informe. Sin esto, el
+      // titular venía de Gemini (más generoso) y se contradecía con el plan.
+      // Solo si Claude realmente evaluó (aiAvailable): si degradó a técnico-solo,
+      // conservamos el puntaje base (Gemini), que es mejor que técnico pelado.
+      if (detailed.clientScore && detailed.clientScore.aiAvailable) {
+        full = {
+          ...full,
+          finalScore: detailed.clientScore.finalScore,
+          subScores: detailed.clientScore.subScores,
+          verdict: detailed.clientScore.verdict,
+          aiAnalysisAvailable: detailed.clientScore.aiAvailable,
+        };
+      }
+    } else {
+      full = { ...full, detailedReport: null };
+    }
   } else {
     full = { ...full, detailedReport: null };
   }

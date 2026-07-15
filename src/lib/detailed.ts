@@ -56,11 +56,27 @@ export interface BuildDetailedReportArgs {
 /** Evaluación homogénea del cliente (misma vara que los competidores), hecha UNA vez. */
 interface ClientEval {
   snapshot: ScoreSnapshot;
+  verdict: string;
   tech: TechnicalResult;
   content: ContentResult;
 }
 
-export async function buildDetailedReport(args: BuildDetailedReportArgs): Promise<DetailedReport> {
+/**
+ * Puntaje canónico del cliente para el reporte detallado: es el de Claude (misma
+ * vara que los competidores). El caller (scanFlow) lo usa para que el TITULAR y
+ * las DIMENSIONES del reporte pagado coincidan con la comparativa y con la prosa
+ * — antes el titular venía de Gemini (más generoso) y contradecía al resto.
+ */
+export interface ClientCanonicalScore {
+  finalScore: number;
+  subScores: SubScores;
+  verdict: string;
+  aiAvailable: boolean;
+}
+
+export async function buildDetailedReport(
+  args: BuildDetailedReportArgs
+): Promise<{ report: DetailedReport; clientScore: ClientCanonicalScore | null }> {
   const model = args.env.DETAILED_MODEL || DEFAULT_DETAILED_MODEL;
   const generatedAt = new Date().toISOString();
 
@@ -93,7 +109,7 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
     }),
   ]);
 
-  return {
+  const report: DetailedReport = {
     competitors: competitorSection.competitors,
     competitorsSummary: competitorSection.competitorsSummary,
     competitorInsights: competitorSection.competitorInsights,
@@ -105,6 +121,21 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
     aiPerception: core?.aiPerception ?? null,
     generatedAt,
   };
+
+  // Puntaje canónico (Claude) para que el titular y las dimensiones del reporte
+  // coincidan con la comparativa y la prosa. null si la evaluación homogénea
+  // falló → el caller conserva el puntaje base (Gemini).
+  const clientScore: ClientCanonicalScore | null =
+    clientEval && clientEval.snapshot.finalScore != null && clientEval.snapshot.subScores
+      ? {
+          finalScore: clientEval.snapshot.finalScore,
+          subScores: clientEval.snapshot.subScores,
+          verdict: clientEval.verdict,
+          aiAvailable: clientEval.snapshot.aiAvailable ?? true,
+        }
+      : null;
+
+  return { report, clientScore };
 }
 
 // Puntúa al cliente con el MISMO método que a los competidores (computeTechnical +
@@ -114,8 +145,8 @@ export async function buildDetailedReport(args: BuildDetailedReportArgs): Promis
 async function evaluateClient(args: BuildDetailedReportArgs): Promise<ClientEval> {
   const tech = computeTechnical(args.signals, args.site);
   const content = await evaluateWithClaude(args.signals, args.env);
-  const { finalScore, subScores } = combineScores(tech, content);
-  return { snapshot: { finalScore, subScores, aiAvailable: content.available }, tech, content };
+  const { finalScore, subScores, verdict } = combineScores(tech, content);
+  return { snapshot: { finalScore, subScores, aiAvailable: content.available }, verdict, tech, content };
 }
 
 // --- Núcleo premium (sección 0 del informe detallado) ---
