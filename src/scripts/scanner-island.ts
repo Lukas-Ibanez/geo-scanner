@@ -68,10 +68,10 @@ const LOAD_STEPS = [
 
 let lastUrl = '';
 let lastEmail = '';
-// Lo último que se envió al backend (passphrase + competidores) — lo usamos
-// para construir el link al reporte PDF cuando el resultado es 'detailed'.
-let lastPassphrase = '';
-let lastCompetitors: string[] = [];
+// URL al reporte PDF que devuelve el server con el token incluido.
+// Ya no construimos el link nosotros: si está, lo usamos tal cual; si no,
+// no mostramos el botón de PDF (el server no autorizó el detallado).
+let lastReportUrl: string | null = null;
 
 // --- Estado de Turnstile ---
 // El widget entrega el token vía callback global. Lo guardamos acá para
@@ -276,6 +276,12 @@ async function runScan(
       renderError(output, msg);
       return;
     }
+    // El server puede devolver `reportUrl` (con token) si el usuario
+    // desbloqueó el detallado. Lo guardamos para el botón "Descargar PDF".
+    const responseObj = json as ScanResult & { reportUrl?: string };
+    if (responseObj.reportUrl) {
+      lastReportUrl = responseObj.reportUrl;
+    }
     renderResult(output, json as ScanResult);
     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch {
@@ -330,7 +336,7 @@ function renderError(output: HTMLElement, message: string): void {
   p.textContent = message;
   box.appendChild(p);
   // Botón "Intentar de nuevo" — limpia el output y hace scroll al form.
-  const retry = el('button', 'btn btn-secondary');
+  const retry = el('button', 'btn btn-secondary') as HTMLButtonElement;
   retry.type = 'button';
   retry.textContent = 'Volver al formulario';
   retry.style.marginTop = '14px';
@@ -836,15 +842,9 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
     }
     const competitors = Array.from(picked).slice(0, 3);
 
-    // Guardamos lo que se mandó al backend para construir luego el link al PDF.
-    // Solo si la passphrase fue validada — si no, no tiene sentido recordarlos.
-    if (isPassphraseValid) {
-      lastPassphrase = passRaw;
-      lastCompetitors = competitors;
-    } else {
-      lastPassphrase = '';
-      lastCompetitors = [];
-    }
+    // El link al PDF lo devuelve el server (con el token incluido). Si la
+    // passphrase no fue validada, el server no emite reportUrl.
+    if (!isPassphraseValid) lastReportUrl = null;
 
     const body: {
       url: string;
@@ -864,10 +864,9 @@ function renderUnlock(output: HTMLElement, r: ScanResult): HTMLElement {
   return box;
 }
 
-// Botón "Descargar reporte PDF" — abre /report en nueva ventana con los params
-// del último escaneo detailed. El passphrase viaja en query string porque es
-// la versión de pruebas; cuando se enchufe Stripe se reemplaza por un token de
-// sesión y esto deja de ser necesario.
+// Botón "Descargar reporte PDF" — usa el reportUrl que devolvió el server.
+// El server genera un token random guardado en KV (TTL 7 días) y la passphrase
+// nunca sale del server ni aparece en la URL.
 function renderPdfButton(): HTMLElement {
   const box = el('div', 'pdf-cta');
   const a = document.createElement('a');
@@ -875,12 +874,7 @@ function renderPdfButton(): HTMLElement {
   a.textContent = 'Descargar reporte PDF';
   a.target = '_blank';
   a.rel = 'noopener';
-  const sp = new URLSearchParams();
-  if (lastUrl) sp.set('url', lastUrl);
-  if (lastEmail) sp.set('email', lastEmail);
-  if (lastPassphrase) sp.set('passphrase', lastPassphrase);
-  if (lastCompetitors.length) sp.set('competitors', lastCompetitors.join(','));
-  a.href = '/report?' + sp.toString();
+  a.href = lastReportUrl || '#';
   box.appendChild(a);
   const hint = el('p', 'pdf-hint');
   hint.textContent =

@@ -31,6 +31,12 @@ export interface ScanFlowParams {
   email?: string | null;
   passphrase?: string | null;
   competitors?: string[];
+  /**
+   * true si el caller ya validó el acceso (ej. /report con token válido).
+   * En ese caso forzamos level='detailed' sin chequear passphrase, y no
+   * aplicamos rate-limit (ya pasó por el unlock del UI).
+   */
+  accessAlreadyGranted?: boolean;
 }
 
 export interface ScanFlowResult {
@@ -64,12 +70,14 @@ export async function buildScan(
   if (!valid.ok) throw new ScanError(400, valid.error);
   const { url, origin, domain, email } = valid.data;
 
-  // 2) Rate limit por IP (con whitelist que lo omite).
+  // 2) Rate limit por IP (con whitelist que lo omite). Si el caller ya validó
+  // el acceso (ej. /report con token), no aplicamos rate-limit: ya pasó por el
+  // unlock del UI.
   const whitelist = (env.RATE_LIMIT_WHITELIST || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (!whitelist.includes(ip)) {
+  if (!params.accessAlreadyGranted && !whitelist.includes(ip)) {
     const limit = intEnv(env.RATE_LIMIT_PER_HOUR, 5);
     const rl = await checkRateLimit(env.SCAN_CACHE, ip, limit);
     if (!rl.allowed) {
@@ -81,10 +89,15 @@ export async function buildScan(
   }
 
   const ttlHours = intEnv(env.CACHE_TTL_HOURS, 6);
-  const level = accessLevel(
-    { email, passphrase: params.passphrase },
-    env.DETAILED_PASSPHRASE ?? null
-  );
+  // Si el caller ya validó el acceso (token de reporte válido), forzamos
+  // 'detailed' sin chequear passphrase — la passphrase nunca viaja al server
+  // en este path.
+  const level: AccessLevel = params.accessAlreadyGranted
+    ? 'detailed'
+    : accessLevel(
+        { email, passphrase: params.passphrase },
+        env.DETAILED_PASSPHRASE ?? null
+      );
   const entitled = level !== 'teaser';
 
   // 3) Caché por dominio (ahorra cuota de Gemini y evita re-escaneos).

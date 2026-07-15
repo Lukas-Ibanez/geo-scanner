@@ -22,24 +22,20 @@ const DEFAULT_FROM = 'GEO Scanner <informe@geo.lukasibanez.dev>';
 // correo). Configurable por env; default al dominio de producción.
 const DEFAULT_PUBLIC_URL = 'https://geo.lukasibanez.dev';
 
-// Construye la URL absoluta al reporte PDF (/report?...). Vacía si no hay
-// passphrase (porque /report exige level==='detailed', que solo se alcanza
-// con passphrase válida).
+// Construye la URL absoluta al reporte PDF (/report?token=...). Vacía si no
+// hay reportToken (porque /report exige token válido, que solo se genera
+// cuando el usuario desbloqueó el detallado con la passphrase correcta).
+//
+// La URL ya NO incluye la passphrase — se reemplazó por un token random
+// guardado en KV. La passphrase nunca sale del server, así no queda en
+// logs (browser, server, mail) ni se filtra si alguien ve el correo.
 function buildReportUrl(
   publicUrl: string,
-  result: ScanResult,
-  passphrase: string,
-  competitors: string[]
+  reportToken: string
 ): string {
-  if (!passphrase) return '';
+  if (!reportToken) return '';
   const sp = new URLSearchParams();
-  sp.set('url', result.url);
-  if (result.url) {
-    // sacamos el email desde el result si lo tuviéramos; acá no lo tenemos,
-    // así que se omite sin drama — /report solo requiere url + passphrase.
-  }
-  sp.set('passphrase', passphrase);
-  if (competitors.length) sp.set('competitors', competitors.join(','));
+  sp.set('token', reportToken);
   // Quita slash final del origin si lo tiene.
   const base = publicUrl.replace(/\/$/, '');
   return `${base}/report?${sp.toString()}`;
@@ -606,7 +602,7 @@ export async function sendReportEmail(
   env: Env,
   to: string,
   result: ScanResult,
-  opts: { passphrase?: string; competitors?: string[] } = {}
+  opts: { reportToken?: string } = {}
 ): Promise<boolean> {
   if (!env.RESEND_API_KEY) {
     console.warn('sendReportEmail: RESEND_API_KEY no configurado, se omite el envío.');
@@ -619,12 +615,9 @@ export async function sendReportEmail(
   const from = env.RESEND_FROM || DEFAULT_FROM;
   const ctaUrl = env.PORTFOLIO_CTA_URL || DEFAULT_CTA_URL;
   const publicUrl = env.PUBLIC_URL || DEFAULT_PUBLIC_URL;
-  const reportUrl = buildReportUrl(
-    publicUrl,
-    result,
-    opts.passphrase || '',
-    opts.competitors || []
-  );
+  // El link al PDF ya no lleva la passphrase: usa un token random guardado
+  // en KV (generado en scan.ts cuando se desbloquea el detallado).
+  const reportUrl = buildReportUrl(publicUrl, opts.reportToken || '');
 
   const body: Record<string, unknown> = {
     from,

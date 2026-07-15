@@ -2,6 +2,7 @@
 import type { ScanResult } from './types';
 
 const PREFIX = 'scan:';
+const TOKEN_PREFIX = 'report-token:';
 
 export async function getCachedScan(kv: KVNamespace, domain: string): Promise<ScanResult | null> {
   try {
@@ -26,5 +27,45 @@ export async function putCachedScan(
     });
   } catch {
     // Cachear es best-effort: si KV falla, el escaneo igual se devuelve.
+  }
+}
+
+// --- Tokens de acceso al reporte detallado ---
+// Reemplazan a la passphrase en la URL del PDF. Cada token se genera cuando
+// el usuario desbloquea el detallado con la passphrase válida, y se guarda
+// con la URL + competidores que quiere ver. /report valida el token en vez
+// de pedir la passphrase. La passphrase NUNCA sale del server.
+//
+// Razón: la passphrase en query string quedaba en logs (browser, server, mail),
+// exponía el acceso de pago a cualquiera que viera el correo.
+export interface ReportTokenData {
+  url: string;
+  competitors: string[];
+  createdAt: string;
+}
+
+export async function getReportToken(kv: KVNamespace, token: string): Promise<ReportTokenData | null> {
+  try {
+    const raw = await kv.get(TOKEN_PREFIX + token);
+    if (!raw) return null;
+    return JSON.parse(raw) as ReportTokenData;
+  } catch {
+    return null;
+  }
+}
+
+export async function putReportToken(
+  kv: KVNamespace,
+  token: string,
+  data: { url: string; competitors: string[] },
+  ttlDays: number = 7
+): Promise<void> {
+  try {
+    await kv.put(TOKEN_PREFIX + token, JSON.stringify({ ...data, createdAt: new Date().toISOString() }), {
+      // KV exige un mínimo de 60s. 7 días = 604800s.
+      expirationTtl: Math.max(60, Math.round(ttlDays * 86400)),
+    });
+  } catch {
+    // best-effort
   }
 }

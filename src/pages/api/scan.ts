@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { buildScan, ScanError } from '../../lib/scanFlow';
 import { accessLevel, projectForClient } from '../../lib/entitlement';
-import { getCachedScan } from '../../lib/cache';
+import { getCachedScan, putReportToken } from '../../lib/cache';
 import { saveLead } from '../../lib/leads';
 import { sendReportEmail } from '../../lib/email';
 import { verifyTurnstile } from '../../lib/turnstile';
@@ -29,6 +29,7 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       email?: unknown;
       passphrase?: unknown;
       competitors?: unknown;
+      phase?: unknown;
       'cf-turnstile-response'?: unknown;
     };
     try {
@@ -45,11 +46,11 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
       request.headers.get('CF-Connecting-IP') || clientAddress || 'unknown';
     const phase = payload?.phase === 'unlock' ? 'unlock' : 'scan';
     if (phase === 'scan') {
-      const turn = await verifyTurnstile(
-        env.TURNSTILE_SECRET,
-        payload?.['cf-turnstile-response'],
-        ip
-      );
+      const turnstileToken =
+        typeof payload?.['cf-turnstile-response'] === 'string'
+          ? payload['cf-turnstile-response']
+          : undefined;
+      const turn = await verifyTurnstile(env.TURNSTILE_SECRET, turnstileToken, ip);
       if (!turn.success) {
         return json(
           { error: turn.error || 'Verificación anti-bot falló. Inténtalo de nuevo.' },
@@ -95,22 +96,34 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
     // 4) Proyectar al cliente según el nivel.
     const projected = projectForClient(full, level);
 
-    // 5) Email: cuando el lead desbloqueó el detalle y hay recomendaciones.
-    if (email && entitled && projected.recommendations && projected.recommendations.length) {
-      // Mandamos passphrase + competitors al sendReportEmail para que pueda
-      // armar el link al reporte PDF (/report) en el cuerpo del correo. Solo
-      // se muestra el link si la passphrase es válida (level==='detailed');
-      // para usuarios 'full' el link queda vacío.
-      const send = sendReportEmail(env, email, projected, {
-        passphrase: typeof passphrase === 'string' ? passphrase : undefined,
+    // 5) Generar token de acceso al PDF (solo si level==='detailed'). El token
+    // reemplaza a la passphrase en la URL: es random, se guarda en KV con la
+    // URL+competidores, y vence a los 7 días. /report valida el token.
+    // La passphrase NUNCA sale del server — no aparece ni en la URL del mail
+    // ni en los logs del browser/servidor.
+    let reportToken: string | undefined;
+    let reportUrl: string | undefined;
+    if (level === 'detailed') {
+      reportToken = crypto.randomUUID();
+      await putReportToken(env.SCAN_CACHE, reportToken, {
+        url: full.url,
         competitors,
+      });
+      const publicUrl = (env.PUBLIC_URL || 'https://geo.lukasibanez.dev').replace(/\/$/, '');
+      reportUrl = `${publicUrl}/report?token=${reportToken}`;
+    }
+
+    // 6) Email: cuando el lead desbloqueó el detalle y hay recomendaciones.
+    if (email && entitled && projected.recommendations && projected.recommendations.length) {
+      const send = sendReportEmail(env, email, projected, {
+        reportToken,
       });
       const waitUntil = locals.runtime.ctx?.waitUntil?.bind(locals.runtime.ctx);
       if (waitUntil) waitUntil(send);
       else await send;
     }
 
-    return json(projected, 200);
+    return json({ ...projected, reportUrl }, 200);
   } catch (err) {
     console.error('scan failed:', err);
     return json(

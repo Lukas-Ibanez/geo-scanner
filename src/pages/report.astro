@@ -1,8 +1,12 @@
 ---
 // /report — renderiza el reporte GEO completo en HTML print-ready.
-// El usuario abre esta URL con los params ?url=...&email=...&passphrase=...
-// (la passphrase es temporal hasta que se enchufe Stripe), y luego usa el botón
-// "Imprimir / Guardar como PDF" o el atajo Ctrl/Cmd+P para bajar el PDF.
+// El usuario abre esta URL con ?token=<uuid> y usa el botón "Imprimir /
+// Guardar como PDF" o el atajo Ctrl/Cmd+P para bajar el PDF.
+//
+// El token se genera server-side en /api/scan cuando el usuario desbloquea
+// el detallado con la passphrase correcta, y se guarda en KV con la URL +
+// competidores + TTL de 7 días. /report valida el token y rechaza si
+// falta, es inválido o venció. La passphrase NUNCA viaja en la URL.
 //
 // Internamente delega en buildScan (mismo flujo que /api/scan), por lo que el
 // reporte SIEMPRE refleja el último análisis disponible (sin caché — el
@@ -10,38 +14,50 @@
 // de pago).
 import type { SubScores, TechnicalCheck } from '../lib/types';
 import { buildScan, ScanError } from '../lib/scanFlow';
+import { getReportToken } from '../lib/cache';
 import '../styles/report.css';
 
 // /report es SSR (necesita la sesión del usuario) — no se prerenderea.
 export const prerender = false;
 
 const params = Astro.url.searchParams;
-const url = params.get('url');
-const email = params.get('email');
-const passphrase = params.get('passphrase');
-const competitorsParam = params.get('competitors');
-const competitors = competitorsParam
-  ? competitorsParam.split(',').map((s) => s.trim()).filter(Boolean)
-  : [];
+const env = Astro.locals.runtime.env;
 
-if (!url) {
+// Acceso por token (preferido). La passphrase ya NO se acepta en la URL —
+// el server la valida una vez en /api/scan y emite un token opaco.
+const token = params.get('token');
+let url: string;
+let email: string | null = null;
+let competitors: string[];
+
+if (token) {
+  const data = await getReportToken(env.SCAN_CACHE, token);
+  if (!data) {
+    return new Response(
+      'El enlace del reporte venció o no es válido. Vuelve a hacer el escaneo desde la página principal para generar uno nuevo.',
+      { status: 403, headers: { 'content-type': 'text/plain; charset=utf-8' } }
+    );
+  }
+  url = data.url;
+  competitors = data.competitors;
+} else {
   return new Response(
-    'Falta el parámetro "url". Abre el reporte desde el resultado del escaneo.',
+    'Falta el token de acceso. Abre el reporte desde el enlace que te llegó por correo.',
     { status: 400, headers: { 'content-type': 'text/plain; charset=utf-8' } }
   );
 }
 
-const env = Astro.locals.runtime.env;
-
 // Reusamos buildScan (mismo flujo que el endpoint). Para el reporte NO
-// aplicamos rate-limit al cliente porque ya pasó por el unlock del UI.
+// aplicamos rate-limit ni re-validamos la passphrase — el token YA es
+// la prueba de acceso. `accessAlreadyGranted: true` fuerza level='detailed'.
 let flow;
 try {
   flow = await buildScan(env, 'report', {
     url,
     email,
-    passphrase,
+    passphrase: null,
     competitors,
+    accessAlreadyGranted: true,
   });
 } catch (err) {
   if (err instanceof ScanError) {
