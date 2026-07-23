@@ -120,10 +120,25 @@ export async function buildScan(
         status: site.status,
         htmlLen: site.html.length,
       });
-      throw new ScanError(
-        502,
-        'No pudimos leer este sitio. Puede estar bloqueando lectores automáticos o no estar disponible en este momento.'
-      );
+      // Mensaje contextual según el motivo: el usuario suele confundir
+      // "no existe" con "el sitio está caído" y termina pensando que es
+      // un bug nuestro. status=0 suele ser DNS (dominio no existe /
+      // no resuelve), 5xx es sitio caído, 403/451 es bloqueo o geofence.
+      let reason: string;
+      if (site.status === 0) {
+        reason =
+          'No pudimos resolver el dominio. Revisá que la dirección esté bien escrita y que el sitio exista.';
+      } else if (site.status >= 500) {
+        reason =
+          'El sitio está caído o no responde en este momento. Probá de nuevo en unos minutos.';
+      } else if (site.status === 403 || site.status === 451) {
+        reason =
+          'El sitio está bloqueando lectores automáticos o no permite el acceso desde nuestra ubicación.';
+      } else {
+        reason =
+          'No pudimos leer este sitio. Puede estar bloqueando lectores automáticos o no estar disponible en este momento.';
+      }
+      throw new ScanError(502, reason);
     }
 
     signals = await parseHtml(site.html);

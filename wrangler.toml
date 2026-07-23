@@ -46,13 +46,15 @@ GEMINI_DAILY_LIMIT = "500"
 # Modelo de Claude para el SCORING (evaluateWithClaude: cliente y competidores
 # en la comparativa manzana-con-manzana): por defecto 'claude-haiku-4-5'.
 # Se mantiene en Haiku a propósito: barato y consistente entre sitios.
-# ANTHROPIC_MODEL = "claude-haiku-4-5"
-# Tope interno de llamadas/día a Claude, global a contenido + informe detallado (0 = sin tope).
-# ANTHROPIC_DAILY_LIMIT = "200"
+ANTHROPIC_MODEL = "claude-haiku-4-5"
+# Tope interno de llamadas/día a Claude, global a contenido + informe detallado
+# (0 = sin tope). Claude es de pago: este tope es para no comerse un cobro
+# inesperado si algo sale mal (ej. loop infinito).
+ANTHROPIC_DAILY_LIMIT = "200"
 # Modelo de la PROSA del informe detallado (resumen ejecutivo, diagnóstico por
 # dimensión, plan de acción, percepción IA, síntesis competitiva, preguntas):
 # por defecto 'claude-sonnet-4-6' — es lo que el cliente paga (~US$0,15-0,40/reporte).
-# DETAILED_MODEL = "claude-sonnet-4-6"
+DETAILED_MODEL = "claude-sonnet-4-6"
 # DETAILED_PASSPHRASE NO va aquí: es un secret (ver abajo).
 
 # --- Cloudflare Turnstile (protección anti-bot) ---

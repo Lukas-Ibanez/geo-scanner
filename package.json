@@ -11,8 +11,13 @@
     "deploy": "astro build && wrangler pages deploy ./dist",
     "check": "astro check",
     "astro": "astro",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:local": "wrangler d1 execute geo_leads --local --file=./schema.sql",
     "db:remote": "wrangler d1 execute geo_leads --remote --file=./schema.sql"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.5.0",
@@ -22,6 +27,7 @@
     "@astrojs/check": "^0.9.9",
     "@cloudflare/workers-types": "^4.20230914.0",
     "typescript": "^5.9.3",
+    "vitest": "^2.1.9",
     "wrangler": "^4.0.0"
   }
 }

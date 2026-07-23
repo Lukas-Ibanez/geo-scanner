@@ -11,7 +11,15 @@ export type ValidationResult =
   | { ok: true; data: ValidatedInput }
   | { ok: false; error: string };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Email: regex más estricta que la típica "tiene @ y un punto" — acepta sólo
+// la sintaxis que el 99% de los providers reales soporta y rechaza los casos
+// comunes de typo (a@b.c, @, @., ..).
+//   - local part: letras, números y los chars especiales típicos (. _ - +)
+//   - domain: al menos un punto con TLD de 2+ letras (sin emails tipo "a@b")
+//   - sin puntos consecutivos (..) ni al inicio/final del local part
+// No implementa RFC 5322 completo (es un monstruo); para el 99% de los casos
+// reales es suficiente, y para los raros Resend igual rebota el SMTP.
+const EMAIL_RE = /^(?!\.)(?!.*\.\.)[a-zA-Z0-9._%+-]+(?<!\.)@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
 
 // Hosts privados / loopback que no tiene sentido (ni es seguro) escanear.
 const PRIVATE_HOST_RE = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|127\.|0\.)/;

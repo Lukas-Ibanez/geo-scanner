@@ -30,6 +30,7 @@ interface Env {
   RATE_LIMIT_PER_HOUR?: string;
   RATE_LIMIT_WHITELIST?: string;
   PASSPHRASE_CHECK_PER_HOUR?: string; // tope de validación de passphrase por IP/hora (default 30)
+  REPORT_STATUS_PER_HOUR?: string; // tope de poll de /api/report-status por IP/hora (default 120)
   CACHE_TTL_HOURS?: string;
   PORTFOLIO_CTA_URL?: string;
   // Capa gratuita (escaneo base). El detallado SIEMPRE usa Claude — este switch no lo afecta.

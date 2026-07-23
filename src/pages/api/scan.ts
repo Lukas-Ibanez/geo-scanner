@@ -128,7 +128,22 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
             await sendReportEmail(env, email, dprojected, { reportToken });
           }
         } catch (e) {
+          // Marcamos el token como fallido para que /api/report-status y /report
+          // puedan contárselo al usuario en vez del mensaje esperanzador
+          // "te llegará por correo" (que sería MENTIRA si el build falló).
+          // Sin esto, el cliente hace poll ciego por 2.7 min, ve el mensaje
+          // esperanzador, y nunca recibe nada. Bug clásico de UX.
           console.error('background detailed failed:', e);
+          try {
+            await putReportToken(env.SCAN_CACHE, reportToken, {
+              url: full.url,
+              competitors,
+              failed: true,
+              failedReason: e instanceof Error ? e.message : String(e),
+            });
+          } catch (markErr) {
+            console.error('background: no pude marcar el token como fallido', markErr);
+          }
         }
       };
       // En prod waitUntil corre en segundo plano; en local (sin ctx) hacemos await.

@@ -48,6 +48,10 @@ export interface ReportTokenData {
    * competidor con Claude). Opcional para compatibilidad con tokens viejos.
    */
   result?: ScanResult;
+  /** true si el background detailed falló — el token existe pero sin resultado. */
+  failed?: boolean;
+  /** Motivo del fallo (para mostrar al usuario). */
+  failedReason?: string;
 }
 
 export async function getReportToken(kv: KVNamespace, token: string): Promise<ReportTokenData | null> {
